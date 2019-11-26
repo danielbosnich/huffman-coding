@@ -4,9 +4,18 @@
 // Term: Fall 2019
 
 #include <iostream>
-#include <string>
+#include <fstream>
+#include <sstream>
 #include <queue>
+#include <stack>
+#include <vector>
 using namespace std;
+
+struct Character {
+  char c;
+  int freq;
+  Character(char ch, int fr) : c(ch), freq(fr) {}
+};
 
 // Prints the menu with information on how to use the program
 void printMenu() {
