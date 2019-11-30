@@ -7,167 +7,179 @@
 #include <fstream>
 #include <sstream>
 #include <queue>
-#include <stack>
 #include <vector>
-#include <bits/stdc++.h>
+#include <unordered_map>
 using namespace std;
 
+// Struct that implements a node in the Huffman Tree
 struct Character {
-  char c;
-  int freq;
-  Character* parent;
-  Character* leftChild;
-  Character* rightChild;
-  Character(char ch, int fr) : c(ch), freq(fr), parent(NULL), leftChild(NULL), rightChild(NULL) {};
-  Character() : c(-1), freq(0), parent(NULL), leftChild(NULL), rightChild(NULL) {};
+	char letter;
+	int freq;
+	Character* parent;
+	Character* left_child;
+	Character* right_child;
+	// Constructor
+	Character(char letter, int freq) {
+		this->letter = letter;
+		this->freq = freq;
+		parent = NULL;
+		left_child = NULL;
+		right_child = NULL;
+	}
 };
 
-struct compare_chars {
-  bool operator() (Character* const& char1, Character* const& char2) { //remembered how to do this via http://www.cplusplus.com/forum/general/43047/
-    return char1->freq > char2->freq; //return true if char 1 would come before char 2
-  }
+// Struct used to compare two characters when adding to the priority queue
+struct CompareChars {
+	bool operator() (const Character* char1, const Character* char2) {
+		return char1->freq > char2->freq; // Return true if char1 has a higher frequency than char2
+	}
 };
 
+// Class that implements the Huffman Tree
 class HuffmanTree {
+	Character* root;
 
+	// Recursive tree traversal that prints the letter and frequency at each node
+	void print(Character* node) {
+		if (node == NULL) {
+			return;
+		}
+		cout << node->letter << " " << node->freq << endl;
+		print(node->left_child);
+		print(node->right_child);
+	}
 public:
-  Character* root; //needs to be accessible
-  unordered_map<char, vector<bool>> mapping;
+	unordered_map<char, vector<bool>> mapping;
+	// Constructor
+	HuffmanTree(priority_queue<Character*, vector<Character*>, CompareChars>& pq, int highestFrequency, bool isAuxillary) {
+		if (pq.size() == 0) {
+			root = NULL;
+			return;
+		}
 
-  HuffmanTree(priority_queue<Character*, vector<Character*>, compare_chars> &pq, int highestFrequency, bool isAuxillary) {
-    if (pq.size() == 0) {
-      root = NULL;
-      return;
-    }
+		if (pq.size() == 1) {
+			Character* top = pq.top();
+			pq.pop();
+			root = top;
+			return;
+		}
 
-    if (pq.size() == 1) {
-      Character* top = pq.top();
-      pq.pop();
-      root = top;
-      return;
-    }
+		while (pq.size() > 1) {
+			cout << "here" << endl;
 
-    while(pq.size() > 1) {
-      cout << "here" << endl;
+			// Take first 2 nodes
+			Character* firstNode = pq.top();
+			pq.pop();
 
-      //take first 2 nodes
-      Character* firstNode = pq.top();
-      pq.pop();
+			Character* secondNode = pq.top();
+			pq.pop();
 
-      Character* secondNode = pq.top();
-      pq.pop();
+			Character* parent = new Character(-1, firstNode->freq + secondNode->freq);
+			//cout << firstNode->c << " " << secondNode->c << " " << parent->freq << endl;
+			parent->right_child = firstNode;
+			parent->left_child = secondNode;
 
-      Character* parent = new Character(-1, firstNode->freq + secondNode->freq);
-      //cout << firstNode->c << " " << secondNode->c << " " << parent->freq << endl;
-      parent->rightChild = firstNode;
-      parent->leftChild = secondNode;
+			firstNode->parent = parent;
+			secondNode->parent = parent;
 
-      firstNode->parent = parent;
-      secondNode->parent = parent;
+			pq.push(parent);
+		}
+		cout << "Priority queue size is: " << pq.size() << endl;
+		root = pq.top();
+		cout << root->letter << " " << root->freq << "\n\n\n";
+		pq.pop();
 
-      pq.push(parent);
-    }
-    cout << pq.size();
-    root = pq.top();
-    cout << root->c << " " << root->freq << "\n\n\n";
-    pq.pop();
+		//create the mapping!
+		vector<bool> v;
+		createMapping(root, v);
+	}
 
-    //create the mapping!
-    vector<bool> v;
-    createMapping(root, v);
-  }
+	// Brief comment for each method
+	void createMapping(Character* n, vector<bool> v) {
+		if (n == NULL) {
+			return;
+		}
+		if (n->letter != -1) {
+			mapping[n->letter] = v;
+			return;
+		}
+		// If its not a char
+		v.push_back(0);
+		createMapping(n->left_child, v);
+		v.pop_back();
 
-  void createMapping(Character* n, vector<bool> v) {
-    if (n == NULL) {
-      return;
-    }
-    if (n->c != -1) {
-      mapping[n->c] = v;
-      return;
-    }
-    //if its not a char
-    v.push_back(0);
-    createMapping(n->leftChild, v);
-    v.pop_back();
+		v.push_back(1);
+		createMapping(n->right_child, v);
+		v.pop_back();
+	}
 
-    v.push_back(1);
-    createMapping(n->rightChild, v);
-    v.pop_back();
-  }
+	// Print helper method
+	void print_helper() {
+		print(root);
+	}
 
-  void print(Character* n) {
-    if (n == NULL) {
-      return;
-    }
-    cout << n->c << " " << n->freq << endl;
-    print(n->leftChild);
-    print(n->rightChild);
-  }
+	// Brief comment for each method
+	vector<bool> encodeString(string megaStr) {
+		vector<bool> b;
+		// Each bit would be represented by a bool
+		return b;
+	}
 
-  vector<bool> encodeString(string megaStr) {
-    vector<bool> b;
-    //each bit would be represented by a bool
-    return b;
-  }
-
-  string decodeString(vector<bool> b) {
-    return "";
-  }
+	// Brief comment for each method
+	string decodeString(vector<bool> b) {
+		return "";
+	}
 };
 
 
-priority_queue<Character*, vector<Character*>, compare_chars> countFrequencies(int &highestFrequency) {
-  vector<Character*> allChars; //not using a 255 element long array because that wastes space, and might not account for non-ascii characters
-  ifstream reader;
-  string currentLine;
-  string megaStr;
-  reader.open("toCompress.txt");
+priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(int& highestFrequency) {
+	vector<Character*> all_chars;
+	ifstream reader;
+	string current_line;
+	reader.open("toCompress.txt"); // For testing purposes
 
-  if(!reader.is_open()) {
-    priority_queue<Character*, vector<Character*>, compare_chars>  pq;
-    return pq;
-  }
+	if (!reader.is_open()) {
+		priority_queue<Character*, vector<Character*>, CompareChars>  pq;
+		return pq;
+	}
 
-  while(getline(reader, currentLine)) {
-    megaStr+=currentLine + "\n";
-    for (char c : currentLine) {
-      bool found = false;
-      for (int i = 0; i < allChars.size(); i++) {
-        if (c == allChars[i]->c) {
-          found = true;
-          allChars[i]->freq++;
-          break;
-        }
-      }
-      if (!found) {
-        Character* ch = new Character(c, 1);
-        allChars.push_back(ch);
-      }
-    } //now we have counted all the frequencies of every character. let's make a priority_queue!
-  }
+	while (getline(reader, current_line)) {
+		for (char current_letter : current_line) {
+			bool letter_found = false;
+			// Check if the letter has already been created. If so, increment its frequency
+			for (int i = 0; i < all_chars.size(); i++) {
+				if (current_letter == all_chars[i]->letter) {
+					letter_found = true;
+					++all_chars[i]->freq;
+					break;
+				}
+			}
+			// If the letter doesn't exist then create the Character object
+			if (!letter_found) {
+				Character* ch = new Character(current_letter, 1);
+				all_chars.push_back(ch);
+			}
+		}
+	}
 
-  priority_queue<Character*, vector<Character*>, compare_chars>  pq;
+	priority_queue<Character*, vector<Character*>, CompareChars>  pq;
+	highestFrequency = all_chars[0]->freq;
 
-  highestFrequency = allChars[0]->freq;
-
-  for (Character* c : allChars) {
-    if (c->freq > highestFrequency) {
-      highestFrequency = c->freq;
-    }
-    pq.push(c);
-  }
-
-  return pq;
+	for (Character* letter : all_chars) {
+		if (letter->freq > highestFrequency) {
+			highestFrequency = letter->freq;
+		}
+		pq.push(letter);
+	}
+	return pq;
 };
-
-
 
 
 // Prints the menu with information on how to use the program
 void printMenu() {
 	cout << "======Main Menu======" << endl;
 	cout << "1. Encode a word" << endl; //maybe have this say give a file name?
-  cout << "2. Decode that word" << endl;
+	cout << "2. Decode that word" << endl;
 	cout << "3. Quit" << endl;
 }
 
@@ -181,37 +193,37 @@ string getWordInput() {
 
 int main() {
 	// Program variables
-  int highestFrequency;
+	int highestFrequency;
 
-  priority_queue<Character*, vector<Character*>, compare_chars> pq = countFrequencies(highestFrequency);
-  //vector<bool> b = tree.encodeString(megaStr); <-- for debugging
-  //string megaCheck = tree.decodeString(b);
+	priority_queue<Character*, vector<Character*>, CompareChars> pq = countFrequencies(highestFrequency);
+	//vector<bool> b = tree.encodeString(megaStr); <-- for debugging
+	//string megaCheck = tree.decodeString(b);
 
-  cout << highestFrequency << endl;
+	cout << "The highest frequency is:" << highestFrequency << endl;
 
-  HuffmanTree tree(pq, highestFrequency, false);
+	HuffmanTree tree(pq, highestFrequency, false);
 
-  tree.print(tree.root);
+	tree.print_helper();
 
-  for (bool x : tree.mapping['a']) {
-    cout << x;
-  }
-  cout << endl;
-  for (bool x : tree.mapping['p']) {
-    cout << x;
-  }
-  cout << endl;
-  for (bool x : tree.mapping['m']) {
-    cout << x;
-  }
-  cout << endl << endl << endl;
+	for (bool x : tree.mapping['a']) {
+		cout << x;
+	}
+	cout << endl;
+	for (bool x : tree.mapping['p']) {
+		cout << x;
+	}
+	cout << endl;
+	for (bool x : tree.mapping['m']) {
+		cout << x;
+	}
+	cout << endl << endl << endl;
 
-  //^^ also debugging, check that the tree is right
-
-
+	//^^ also debugging, check that the tree is right
 
 
 
+
+	/*
 	bool quit_program = false;
 	int user_input;
 	string word_input; //i dont think we should read user input - we should be compressing files, treating them as large strings??
@@ -224,9 +236,9 @@ int main() {
 			word_input = getWordInput();
 			cout << "Encoding word" << endl;
 			break;
-    case 2:
-      cout << "Decoding word" << endl;
-      break;
+		case 2:
+			cout << "Decoding word" << endl;
+			break;
 		case 3:
 			cout << "Goodbye!" << endl;
 			quit_program = true;
@@ -239,4 +251,5 @@ int main() {
 		}
 	}
 	return 0;
+	*/
 }
