@@ -49,6 +49,20 @@ class HuffmanTree {
 		print(node->left_child);
 		print(node->right_child);
 	}
+
+	// In-order tree traversal that looks for a match to the passed coded value
+	void checkForCodedValue(Character* node, string code, char& result) {
+		if (node == NULL) {
+			return;
+		}
+		checkForCodedValue(node->left_child, code, result);
+		if (node->letter != -1) {
+			if (mapping[node->letter] == code) {
+				result = node->letter;
+			}
+		}
+		checkForCodedValue(node->right_child, code, result);
+	}
 public:
 	// Constructor
 	HuffmanTree(priority_queue<Character*, vector<Character*>, CompareChars> pq) {
@@ -133,12 +147,26 @@ public:
 	// Decodes the passed string
 	string decodeString(string to_decode) {
 		string decoded_string = "";
-		// Still needs to be implemented
+		char result = 0;
+		string coded_value = "";
+		// Read a character from the encoded string and check if it matches the coded
+		// value for a character in the Huffman Tree. If it doesn't, append the next
+		// character and check again. If it does, append the matching character to
+		// the decoded string and reset the string used to check.
+		for (int i = 0; i < to_decode.size(); ++i) {
+			coded_value += to_decode[i];
+			checkForCodedValue(root, coded_value, result);
+			if (result != 0) {
+				decoded_string += result;
+				coded_value = "";
+				result = 0;
+			}
+		}
 		return decoded_string;
 	}
 };
 
-// Function that counts the frequencies of all letters in a file
+// Method that counts the frequencies of all letters in a file
 priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(string filename) {
 	vector<Character*> all_chars;
 	ifstream reader;
