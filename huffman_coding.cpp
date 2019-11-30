@@ -96,8 +96,6 @@ public:
 			second_node->parent = parent;
 			pq.push(parent);
 		}
-
-		cout << "Priority queue size is: " << pq.size() << endl;
 		root = pq.top();
 		pq.pop();
 
@@ -215,7 +213,7 @@ int main(int argc, char* argv[]) {
 	HuffmanTree tree(pq);
 
 	// Check the encoded values
-	cout << endl << "Printing the encoded values" << endl;
+	cout << "Printing the encoded values" << endl;
 	cout << "'a' => " << tree.getEncodedValue('a') << endl;
 	cout << "'p' => " << tree.getEncodedValue('p') << endl;
 	cout << "'m' => " << tree.getEncodedValue('m') << endl << endl;
