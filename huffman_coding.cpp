@@ -38,7 +38,7 @@ struct CompareChars {
 // Class that implements the Huffman Tree
 class HuffmanTree {
 	Character* root;
-	unordered_map<char, string> mapping;
+	unordered_map<char, vector<bool>> mapping;
 
 	// Pre-order tree traversal that prints the letter and frequency at each node
 	void print(Character* node) {
@@ -51,7 +51,7 @@ class HuffmanTree {
 	}
 
 	// In-order tree traversal that looks for a match to the passed coded value
-	void checkForCodedValue(Character* node, string code, char& result) {
+	void checkForCodedValue(Character* node, vector<bool> code, char& result) {
 		if (node == NULL) {
 			return;
 		}
@@ -100,12 +100,12 @@ public:
 		pq.pop();
 
 		// Create the mapping
-		string path = ""; // Start off with an empty string
+		vector<bool> path; // Start off with the path being empty
 		createMapping(root, path);
 	}
 
 	// Creates the mapping for each character and its encoded value
-	void createMapping(Character* node, string path) {
+	void createMapping(Character* node, vector<bool> path) {
 		if (node == NULL) {
 			return;
 		}
@@ -114,11 +114,11 @@ public:
 			return;
 		}
 		// If its not a char, add the direction traveled (0 for left, 1 for right)
-		path.append("0");
+		path.push_back(0);
 		createMapping(node->left_child, path);
 		path.pop_back();
 
-		path.append("1");
+		path.push_back(1);
 		createMapping(node->right_child, path);
 		path.pop_back();
 	}
@@ -129,34 +129,37 @@ public:
 	}
 
 	// Returns the encoded value for a passed letter
-	string getEncodedValue(char letter) {
+	vector<bool> getEncodedValue(char letter) {
 		return mapping[letter];
 	}
 
 	// Encodes the passed string
-	string encodeString(string to_encode) {
-		string encoded_string = "";
+	vector<bool> encodeString(string to_encode) {
+		vector<bool> encoded_string;
 		for (int i = 0; i < to_encode.size(); ++i) {
-			encoded_string.append(mapping[to_encode[i]]);
+			vector<bool> code = mapping[to_encode[i]];
+			for (int j = 0; j < code.size(); ++j) {
+				encoded_string.push_back(code[j]);
+			}
 		}
 		return encoded_string;
 	}
 
-	// Decodes the passed string
-	string decodeString(string to_decode) {
+	// Decodes the passed encoded string
+	string decodeString(vector<bool> to_decode) {
 		string decoded_string = "";
 		char result = 0;
-		string coded_value = "";
+		vector<bool> coded_value;
 		// Read a character from the encoded string and check if it matches the coded
-		// value for a character in the Huffman Tree. If it doesn't, append the next
-		// character and check again. If it does, append the matching character to
-		// the decoded string and reset the string used to check.
+		// value for a character in the Huffman Tree. If it doesn't, push the next
+		// character and check again. If it does, push the matching character to the
+		// decoded string and reset the string used to check.
 		for (int i = 0; i < to_decode.size(); ++i) {
-			coded_value += to_decode[i];
+			coded_value.push_back(to_decode[i]);
 			checkForCodedValue(root, coded_value, result);
 			if (result != 0) {
 				decoded_string += result;
-				coded_value = "";
+				coded_value.clear();
 				result = 0;
 			}
 		}
@@ -214,15 +217,31 @@ int main(int argc, char* argv[]) {
 
 	// Check the encoded values
 	cout << "Printing the encoded values" << endl;
-	cout << "'a' => " << tree.getEncodedValue('a') << endl;
-	cout << "'p' => " << tree.getEncodedValue('p') << endl;
-	cout << "'m' => " << tree.getEncodedValue('m') << endl << endl;
+	string letters = "apm";
+	for (int i = 0; i < letters.size(); ++i) {
+		cout << "'" << letters[i] << "'  =>  ";
+		vector<bool> code = tree.getEncodedValue(letters[i]);
+		for (int j = 0; j < code.size(); ++j) {
+			cout << code[j];
+		}
+		cout << endl;
+	}
+	cout << endl;
 
 	// Encode and decode a string
-	string encoded_value;
+	vector<bool> encoded_value;
 	string decoded_value;
 	encoded_value = tree.encodeString("appm");
-	cout << "appm  =>  " << encoded_value << endl;
+	cout << "appm  =>  ";
+	// Print the encoded string
+	for (int i = 0; i < encoded_value.size(); ++i) {
+		cout << encoded_value[i];
+	}
 	decoded_value = tree.decodeString(encoded_value);
-	cout << encoded_value << "  =>  " << decoded_value << endl;
+	cout << endl;
+	// Print the encoded string
+	for (int i = 0; i < encoded_value.size(); ++i) {
+		cout << encoded_value[i];
+	}
+	cout << "  =>  " << decoded_value << endl;
 }
