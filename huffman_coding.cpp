@@ -167,7 +167,7 @@ public:
 	}
 };
 
-// Method that counts the frequencies of all letters in a file
+// Function that counts the frequencies of all letters in a file
 priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(string filename) {
 	vector<Character*> all_chars;
 	ifstream reader;
