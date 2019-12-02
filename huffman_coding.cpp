@@ -7,145 +7,241 @@
 #include <fstream>
 #include <sstream>
 #include <queue>
-#include <stack>
 #include <vector>
-#include <bits/stdc++.h>
+#include <unordered_map>
 using namespace std;
 
+// Struct that implements a node in the Huffman Tree
 struct Character {
-  char c;
-  int freq;
-  Character(char ch, int fr) : c(ch), freq(fr) {}
+	char letter;
+	int freq;
+	Character* parent;
+	Character* left_child;
+	Character* right_child;
+	// Constructor
+	Character(char letter, int freq) {
+		this->letter = letter;
+		this->freq = freq;
+		parent = NULL;
+		left_child = NULL;
+		right_child = NULL;
+	}
 };
 
-struct compare_chars {
-  bool operator() (Character const& char1, Character const& char2) { //remembered how to do this via http://www.cplusplus.com/forum/general/43047/
-    return char1.freq > char2.freq; //return true if char 1 would come before char 2
-  }
+// Struct used to compare two characters when adding to the priority queue
+struct CompareChars {
+	bool operator() (const Character* char1, const Character* char2) {
+		return char1->freq > char2->freq; // Return true if char1 has a higher frequency than char2
+	}
 };
 
-struct hTreeNode {
-  Character* c;
-  hTreeNode* parent;
-  hTreeNode* leftChild;
-  hTreeNode* rightChild;
-};
-
+// Class that implements the Huffman Tree
 class HuffmanTree {
-  hTreeNode* root;
+	Character* root;
+	unordered_map<char, vector<bool>> mapping;
 
+	// Pre-order tree traversal that prints the letter and frequency at each node
+	void print(Character* node) {
+		if (node == NULL) {
+			return;
+		}
+		cout << node->letter << " " << node->freq << endl;
+		print(node->left_child);
+		print(node->right_child);
+	}
+
+	// In-order tree traversal that looks for a match to the passed coded value
+	void checkForCodedValue(Character* node, vector<bool> code, char& result) {
+		if (node == NULL) {
+			return;
+		}
+		checkForCodedValue(node->left_child, code, result);
+		if (node->letter != -1) {
+			if (mapping[node->letter] == code) {
+				result = node->letter;
+			}
+		}
+		checkForCodedValue(node->right_child, code, result);
+	}
 public:
-  HuffmanTree(priority_queue<Character, vector<Character>, compare_chars> pq) {
-    /*while(!pq.empty()) {
-      Character top = pq.top();
-      pq.pop();
+	// Constructor
+	HuffmanTree(priority_queue<Character*, vector<Character*>, CompareChars> pq) {
+		// Return right away if the passed priority queue is empty
+		if (pq.size() == 0) {
+			root = NULL;
+			return;
+		}
 
-      if (root == NULL) {
-        hTreeNode h = new hTreeNode();
-        h.c = top;
-        h.leftChild = NULL;
-        h.rightChild = NULL;
-        h.parent = NULL;
-        root = h;
-        continue;
-      }
+		// If the passed priority queue has only one value, then create a node for that value
+		if (pq.size() == 1) {
+			Character* top = pq.top();
+			pq.pop();
+			root = top;
+			return;
+		}
 
-      //otherwise, top and root paired together under a parent
-      top =
+		// Remove values from the passed priority queue and create the Character nodes
+		while (pq.size() > 1) {
+			// Remove the top two characters from the priority queue and create nodes for them
+			Character* first_node = pq.top();
+			pq.pop();
+			Character* second_node = pq.top();
+			pq.pop();
 
-      //if the root node you make has a freqency higher than anything in pq, make a left side...recurse??
+			// Create the parent node and set approriate child and parent pointers
+			Character* parent = new Character(-1, first_node->freq + second_node->freq);
+			parent->right_child = first_node;
+			parent->left_child = second_node;
+			first_node->parent = parent;
+			second_node->parent = parent;
+			pq.push(parent);
+		}
+		root = pq.top();
+		pq.pop();
 
-    }*/
-  }
+		// Create the mapping
+		vector<bool> path; // Start off with the path being empty
+		createMapping(root, path);
+	}
 
-  vector<bool> encodeString(string megaStr) {
-    vector<bool> b;
-    //each bit would be represented by a bool 
-    return b;
-  }
+	// Creates the mapping for each character and its encoded value
+	void createMapping(Character* node, vector<bool> path) {
+		if (node == NULL) {
+			return;
+		}
+		if (node->letter != -1) {
+			mapping[node->letter] = path;
+			return;
+		}
+		// If its not a char, add the direction traveled (0 for left, 1 for right)
+		path.push_back(0);
+		createMapping(node->left_child, path);
+		path.pop_back();
 
-  string decodeString(vector<bool> b) {
-    return "";
-  }
+		path.push_back(1);
+		createMapping(node->right_child, path);
+		path.pop_back();
+	}
+
+	// Print helper method
+	void printHelper() {
+		print(root);
+	}
+
+	// Returns the encoded value for a passed letter
+	vector<bool> getEncodedValue(char letter) {
+		return mapping[letter];
+	}
+
+	// Encodes the passed string
+	vector<bool> encodeString(string to_encode) {
+		vector<bool> encoded_string;
+		for (int i = 0; i < to_encode.size(); ++i) {
+			vector<bool> code = mapping[to_encode[i]];
+			for (int j = 0; j < code.size(); ++j) {
+				encoded_string.push_back(code[j]);
+			}
+		}
+		return encoded_string;
+	}
+
+	// Decodes the passed encoded string
+	string decodeString(vector<bool> to_decode) {
+		string decoded_string = "";
+		char result = 0;
+		vector<bool> coded_value;
+		// Read a character from the encoded string and check if it matches the coded
+		// value for a character in the Huffman Tree. If it doesn't, push the next
+		// character and check again. If it does, push the matching character to the
+		// decoded string and reset the string used to check.
+		for (int i = 0; i < to_decode.size(); ++i) {
+			coded_value.push_back(to_decode[i]);
+			checkForCodedValue(root, coded_value, result);
+			if (result != 0) {
+				decoded_string += result;
+				coded_value.clear();
+				result = 0;
+			}
+		}
+		return decoded_string;
+	}
 };
 
+// Function that counts the frequencies of all letters in a file
+priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(string filename) {
+	vector<Character*> all_chars;
+	ifstream reader;
+	string current_line;
+	reader.open(filename);
 
-priority_queue<Character, vector<Character>, compare_chars> countFrequencies() {
-  vector<Character> allChars; //not using a 255 element long array because that wastes space, and might not account for non-ascii characters
-  ifstream reader;
-  string currentLine;
-  string megaStr;
-  reader.open("toCompress.txt");
+	// Make sure the file was opened successfully
+	if (!reader.is_open()) {
+		cout << "Error opening file!" << endl;
+		priority_queue<Character*, vector<Character*>, CompareChars>  pq;
+		return pq;
+	}
 
-  while(getline(reader, currentLine)) {
-    megaStr+=currentLine + "\n";
-    for (char c : currentLine) {
-      bool found = false;
-      for (int i = 0; i < allChars.size(); i++) {
-        if (c == allChars[i].c) {
-          found = true;
-          allChars[i].freq++;
-          break;
-        }
-      }
-      if (!found) {
-        allChars.push_back(Character(c, 1));
-      }
-    } //now we have counted all the frequencies of every character. let's make a priority_queue!
-  }
-
-  priority_queue<Character, vector<Character>, compare_chars>  pq;
-
-  for (Character c : allChars) {
-    pq.push(c);
-  }
-
-  return pq;
-};
-
-// Prints the menu with information on how to use the program
-void printMenu() {
-	cout << "======Main Menu======" << endl;
-	cout << "1. Encode a word" << endl;
-	cout << "2. Quit" << endl;
-}
-
-// Gets user input for the word to encode
-string getWordInput() {
-	string word_input;
-	cout << "Enter a word:" << endl;
-	cin >> word_input;
-	return word_input;
-}
-
-int main() {
-	// Program variables
-	priority_queue<Character, vector<Character>, compare_chars> pq = countFrequencies();
-    HuffmanTree tree(pq);
-	//vector<bool> b = tree.encodeString(megaStr);
-    //string megaCheck = tree.decodeString(b);
-	bool quit_program = false;
-	int user_input;
-	string word_input;
-	// Print the menu and read user input until the user chooses to exit
-	while (!quit_program) {
-		printMenu();
-		cin >> user_input;
-		switch (user_input) {
-		case 1:
-			word_input = getWordInput();
-			cout << "Encoding word" << endl;
-			break;
-		case 2:
-			cout << "Goodbye!" << endl;
-			quit_program = true;
-			break;
-		default:
-			// If the input is incorrect, prompt the user to try again
-			cin.clear();
-			cin.ignore();
-			cout << "Incorrect entry, please try again" << endl;
+	// Read the file line by line and count letter frequencies
+	while (getline(reader, current_line)) {
+		for (char current_letter : current_line) {
+			bool letter_found = false;
+			// Check if the letter has already been created. If so, increment its frequency
+			for (int i = 0; i < all_chars.size(); i++) {
+				if (current_letter == all_chars[i]->letter) {
+					letter_found = true;
+					++all_chars[i]->freq;
+					break;
+				}
+			}
+			// If the letter doesn't exist then create the Character object
+			if (!letter_found) {
+				Character* ch = new Character(current_letter, 1);
+				all_chars.push_back(ch);
+			}
 		}
 	}
-	return 0;
+
+	// Populate and return the priority queue
+	priority_queue<Character*, vector<Character*>, CompareChars>  pq;
+	for (Character* letter : all_chars) {
+		pq.push(letter);
+	}
+	return pq;
+}
+
+int main(int argc, char* argv[]) {
+	priority_queue<Character*, vector<Character*>, CompareChars> pq = countFrequencies(argv[1]);
+
+	// Create the Huffman Tree
+	HuffmanTree tree(pq);
+
+	// Check the encoded values
+	cout << "Printing the encoded values" << endl;
+	string letters = "apm";
+	for (int i = 0; i < letters.size(); ++i) {
+		cout << "'" << letters[i] << "'  =>  ";
+		vector<bool> code = tree.getEncodedValue(letters[i]);
+		for (int j = 0; j < code.size(); ++j) {
+			cout << code[j];
+		}
+		cout << endl;
+	}
+	cout << endl;
+
+	// Encode and decode a string
+	vector<bool> encoded_value;
+	string decoded_value;
+	encoded_value = tree.encodeString("appm");
+	cout << "appm  =>  ";
+	// Print the encoded string
+	for (int i = 0; i < encoded_value.size(); ++i) {
+		cout << encoded_value[i];
+	}
+	decoded_value = tree.decodeString(encoded_value);
+	cout << endl;
+	// Print the encoded string
+	for (int i = 0; i < encoded_value.size(); ++i) {
+		cout << encoded_value[i];
+	}
+	cout << "  =>  " << decoded_value << endl;
 }
