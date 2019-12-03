@@ -132,7 +132,6 @@ public:
 
 	// Returns the encoded value for a passed letter
 	vector<bool> getEncodedValue(char letter) {
-    cout << "here, with: " << int(letter) << endl;
 		return mapping[letter];
 	}
 
@@ -192,8 +191,6 @@ priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(st
         continue;
       }
 
-      cout << current_letter << " " << int(current_letter) << endl;
-
 			bool letter_found = false;
 			// Check if the letter has already been created. If so, increment its frequency
 			for (int i = 0; i < all_chars.size(); i++) {
@@ -221,8 +218,6 @@ priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(st
 
 int main(int argc, char* argv[]) {
 
-  cout << "." << endl;
-
 	priority_queue<Character*, vector<Character*>, CompareChars> pq = countFrequencies(argv[1]);
 
 	// Create the Huffman Tree
@@ -244,13 +239,6 @@ int main(int argc, char* argv[]) {
 	}
 	cout << endl;
 
-  cout << "fdsds: " << endl;
-
-  vector<bool> code = tree.getEncodedValue('\0');
-  for (int j = 0; j < code.size(); ++j) {
-    cout << code[j];
-  }
-  cout << endl;
 
 	// Encode and decode a string
 	vector<bool> encoded_value;
