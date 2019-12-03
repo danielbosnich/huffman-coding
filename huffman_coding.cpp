@@ -188,7 +188,7 @@ priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(st
 	while (getline(reader, current_line)) {
 		for (char current_letter : current_line) {
 
-      if (int(current_letter) <= 32) { //check the ASCII table - these are all empty characters, or spaces.
+      if (int(current_letter) < 32) { //check the ASCII table - these are all empty characters, except spaces.
         continue;
       }
 
