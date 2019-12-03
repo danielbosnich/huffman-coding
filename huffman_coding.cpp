@@ -334,6 +334,8 @@ int main(int argc, char* argv[]) {
 
   cout << "But compressed, the file is about: " << encoded_value.size() << " bits!" << endl;
 
+	cout << "Compressed, the file would be about " << ((double) encoded_value.size() / (double) (fileAsAString.length() * 8)) * 100 << "% smaller." << endl;
+
 
   return 0;
 }
