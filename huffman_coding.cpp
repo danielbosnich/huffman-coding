@@ -63,6 +63,7 @@ class HuffmanTree {
 		}
 		checkForCodedValue(node->right_child, code, result);
 	}
+
 public:
 	// Constructor
 	HuffmanTree(priority_queue<Character*, vector<Character*>, CompareChars> pq) {
@@ -96,6 +97,7 @@ public:
 			second_node->parent = parent;
 			pq.push(parent);
 		}
+
 		root = pq.top();
 		pq.pop();
 
@@ -130,6 +132,7 @@ public:
 
 	// Returns the encoded value for a passed letter
 	vector<bool> getEncodedValue(char letter) {
+    cout << "here, with: " << int(letter) << endl;
 		return mapping[letter];
 	}
 
@@ -184,6 +187,13 @@ priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(st
 	// Read the file line by line and count letter frequencies
 	while (getline(reader, current_line)) {
 		for (char current_letter : current_line) {
+
+      if (int(current_letter) <= 32) { //check the ASCII table - these are all empty characters, or spaces.
+        continue;
+      }
+
+      cout << current_letter << " " << int(current_letter) << endl;
+
 			bool letter_found = false;
 			// Check if the letter has already been created. If so, increment its frequency
 			for (int i = 0; i < all_chars.size(); i++) {
@@ -210,14 +220,20 @@ priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(st
 }
 
 int main(int argc, char* argv[]) {
+
+  cout << "." << endl;
+
 	priority_queue<Character*, vector<Character*>, CompareChars> pq = countFrequencies(argv[1]);
 
 	// Create the Huffman Tree
 	HuffmanTree tree(pq);
 
+  tree.printHelper();
+
 	// Check the encoded values
 	cout << "Printing the encoded values" << endl;
 	string letters = "apm";
+  cout << letters.size() << endl;
 	for (int i = 0; i < letters.size(); ++i) {
 		cout << "'" << letters[i] << "'  =>  ";
 		vector<bool> code = tree.getEncodedValue(letters[i]);
@@ -228,10 +244,18 @@ int main(int argc, char* argv[]) {
 	}
 	cout << endl;
 
+  cout << "fdsds: " << endl;
+
+  vector<bool> code = tree.getEncodedValue('\0');
+  for (int j = 0; j < code.size(); ++j) {
+    cout << code[j];
+  }
+  cout << endl;
+
 	// Encode and decode a string
 	vector<bool> encoded_value;
 	string decoded_value;
-	encoded_value = tree.encodeString("appm");
+	encoded_value = tree.encodeString("appm\0");
 	cout << "appm  =>  ";
 	// Print the encoded string
 	for (int i = 0; i < encoded_value.size(); ++i) {
