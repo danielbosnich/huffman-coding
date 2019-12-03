@@ -38,6 +38,7 @@ struct CompareChars {
 // Class that implements the Huffman Tree
 class HuffmanTree {
 	Character* root;
+  vector<char> letters;
 	unordered_map<char, vector<bool>> mapping;
 
 	// Pre-order tree traversal that prints the letter and frequency at each node
@@ -49,6 +50,16 @@ class HuffmanTree {
 		print(node->left_child);
 		print(node->right_child);
 	}
+
+  // Post-order tree traversal used by the destructor
+  void destroyThe(Character* node) {
+    if (node == NULL) {
+      return;
+    }
+    destroyThe(node->left_child);
+    destroyThe(node->right_child);
+    delete node;
+  }
 
 	// In-order tree traversal that looks for a match to the passed coded value
 	void checkForCodedValue(Character* node, vector<bool> code, char& result) {
@@ -63,6 +74,7 @@ class HuffmanTree {
 		}
 		checkForCodedValue(node->right_child, code, result);
 	}
+
 public:
 	// Constructor
 	HuffmanTree(priority_queue<Character*, vector<Character*>, CompareChars> pq) {
@@ -88,6 +100,14 @@ public:
 			Character* second_node = pq.top();
 			pq.pop();
 
+      //add to the list of letters
+      if (first_node->letter != -1) {
+        letters.push_back(first_node->letter);
+      }
+      if (second_node->letter != -1) {
+        letters.push_back(second_node->letter);
+      }
+
 			// Create the parent node and set approriate child and parent pointers
 			Character* parent = new Character(-1, first_node->freq + second_node->freq);
 			parent->right_child = first_node;
@@ -96,6 +116,7 @@ public:
 			second_node->parent = parent;
 			pq.push(parent);
 		}
+
 		root = pq.top();
 		pq.pop();
 
@@ -103,6 +124,11 @@ public:
 		vector<bool> path; // Start off with the path being empty
 		createMapping(root, path);
 	}
+
+  // Destructor
+  ~HuffmanTree() {
+    destroyThe(root);
+  }
 
 	// Creates the mapping for each character and its encoded value
 	void createMapping(Character* node, vector<bool> path) {
@@ -132,6 +158,10 @@ public:
 	vector<bool> getEncodedValue(char letter) {
 		return mapping[letter];
 	}
+
+  vector<char> getLetters() {
+    return letters;
+  }
 
 	// Encodes the passed string
 	vector<bool> encodeString(string to_encode) {
@@ -181,9 +211,34 @@ priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(st
 		return pq;
 	}
 
+  int run = 0;
+
 	// Read the file line by line and count letter frequencies
 	while (getline(reader, current_line)) {
+    if (run == 1) { //want to add spaces to the tree to replace newlines. If there is a file that's just words separated by newlines, we want to retain those as spaces and accurately count their frequency in the tree
+      char letter = ' ';
+      bool letter_found = false;
+			// Check if the letter has already been created. If so, increment its frequency
+			for (int i = 0; i < all_chars.size(); i++) {
+				if (letter == all_chars[i]->letter) {
+					letter_found = true;
+					++all_chars[i]->freq;
+					break;
+				}
+			}
+			// If the letter doesn't exist then create the Character object
+			if (!letter_found) {
+				Character* ch = new Character(letter, 1);
+				all_chars.push_back(ch);
+			}
+    }
+
 		for (char current_letter : current_line) {
+
+      if (int(current_letter) < 32) { //check the ASCII table - these are all empty characters, except spaces.
+        continue;
+      }
+
 			bool letter_found = false;
 			// Check if the letter has already been created. If so, increment its frequency
 			for (int i = 0; i < all_chars.size(); i++) {
@@ -199,7 +254,10 @@ priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(st
 				all_chars.push_back(ch);
 			}
 		}
+    run++;
 	}
+
+  reader.close();
 
 	// Populate and return the priority queue
 	priority_queue<Character*, vector<Character*>, CompareChars>  pq;
@@ -210,14 +268,18 @@ priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(st
 }
 
 int main(int argc, char* argv[]) {
+
 	priority_queue<Character*, vector<Character*>, CompareChars> pq = countFrequencies(argv[1]);
 
 	// Create the Huffman Tree
 	HuffmanTree tree(pq);
 
+  //tree.printHelper();
+
+
 	// Check the encoded values
 	cout << "Printing the encoded values" << endl;
-	string letters = "apm";
+	vector<char> letters = tree.getLetters();
 	for (int i = 0; i < letters.size(); ++i) {
 		cout << "'" << letters[i] << "'  =>  ";
 		vector<bool> code = tree.getEncodedValue(letters[i]);
@@ -226,22 +288,54 @@ int main(int argc, char* argv[]) {
 		}
 		cout << endl;
 	}
-	cout << endl;
+	cout << endl << endl << endl;
+
 
 	// Encode and decode a string
 	vector<bool> encoded_value;
 	string decoded_value;
-	encoded_value = tree.encodeString("appm");
-	cout << "appm  =>  ";
+
+  string fileAsAString;
+  ifstream reader;
+	string current_line;
+	reader.open(argv[1]);
+
+	// Make sure the file was opened successfully
+	if (!reader.is_open()) {
+		cout << "Error opening file!" << endl;
+    return 0;
+	}
+
+	// Read the file line by line and count letter frequencies
+	while (getline(reader, current_line)) {
+    fileAsAString += current_line + " ";
+  }
+
+	encoded_value = tree.encodeString(fileAsAString);
+	cout << "The string becomes  =>  ";
 	// Print the encoded string
 	for (int i = 0; i < encoded_value.size(); ++i) {
 		cout << encoded_value[i];
 	}
 	decoded_value = tree.decodeString(encoded_value);
-	cout << endl;
+	cout << endl << endl << endl;
+  cout << "Going the other way, we have: ";
 	// Print the encoded string
 	for (int i = 0; i < encoded_value.size(); ++i) {
 		cout << encoded_value[i];
 	}
 	cout << "  =>  " << decoded_value << endl;
+
+  cout << endl << endl << endl;
+
+  cout << "Let's compare sizes!" << endl;
+
+  cout << "Uncompressed, the file would be about: " << fileAsAString.length() * 8 << " bits" << endl;
+
+  cout << "But compressed, the file is about: " << encoded_value.size() << " bits!" << endl;
+
+	cout << "Compressed, the file would be about " << ((double) encoded_value.size() / (double) (fileAsAString.length() * 8)) * 100 << "% smaller." << endl;
+
+
+  return 0;
 }
