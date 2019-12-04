@@ -496,10 +496,9 @@ void decompressFile(HuffmanTree& tree, string filename, string original_filename
 
 int main() {
 	string input;
-	string menu = "=====MAIN MENU=====\n1.) Compress and decompress a string.\n2.) Compress and decompress a file, but all in print statements, making a Huffman Tree from scratch.\n3.)Compress and decompress a file, but compress into a compressed file, and decompress into a decompressed file, using a premade Huffman Tree.\n\n";
+	string menu = "=====MAIN MENU=====\n1.) Compress and decompress a string.\n2.) Compress and decompress a file, but all in print statements, making a Huffman Tree from scratch.\n3.) Compress and decompress a file, but compress into a compressed file, and decompress into a decompressed file, using a premade Huffman Tree.\n4.) Quit^*!\n\n";
 	cout << menu;
 	while(getline(cin, input)) {
-			cout << menu;
 			int input_int;
 			try {
 				input_int = stoi(input);
@@ -531,25 +530,35 @@ int main() {
 						cout << "Printing the decoded string:" << endl;
 						string decoded_string_from_bools = tree.decodeString(compressed_string_bools);
 						cout << decoded_string_from_bools << endl << endl << endl;
+						cout << menu;
 						break;
 						}
 					case 2:
 						{
 						// Get the filename
-						string stringToCompress;
+						string filename;
 						cout << "Enter the filename or path of the file that you wish to compress." << endl;
-						getline(cin, stringToCompress);
+						getline(cin, filename);
 
 						// Create the Huffman Tree based on the priority queue, making the priority_queue based on the frequencies of characters in the file
-						priority_queue<Character*, vector<Character*>, CompareChars> pq = countFrequenciesInFile(stringToCompress);
+						priority_queue<Character*, vector<Character*>, CompareChars> pq = countFrequenciesInFile(filename);
 						HuffmanTree tree(pq);
 
 						// Print the different encoded values
 						tree.printCodedValues();
 
+						//convert the file to a string, replacing '\n' with " ":
+						string fileAsAString;
+						string curr_line;
+						ifstream file(filename);
+						while(getline(file, curr_line)) {
+							fileAsAString += curr_line + " ";
+						}
+						fileAsAString.erase(fileAsAString.find_last_not_of("\t\n\v\f\r ") + 1);
+
 						// Print the encoded string, as 1's and 0's
 						cout << endl << "Printing the encoded string:" << endl;
-						vector<bool> compressed_string_bools = tree.encodeString(stringToCompress);
+						vector<bool> compressed_string_bools = tree.encodeString(fileAsAString);
 						for (bool b : compressed_string_bools) {
 							cout << b;
 						}
@@ -559,6 +568,7 @@ int main() {
 						cout << "Printing the decoded string:" << endl;
 						string decoded_string_from_bools = tree.decodeString(compressed_string_bools);
 						cout << decoded_string_from_bools << endl << endl << endl;
+						cout << menu;
 						break;
 						}
 					case 3:
@@ -579,6 +589,7 @@ int main() {
 						string compressed_filename = fileToCompress.substr(0, fileToCompress.find(".txt")) + "_compressed.txt";
 						compressFile(tree, fileToCompress);
 						decompressFile(tree, compressed_filename, fileToCompress);
+						cout << menu;
 						break;
 						}
 					case 4:
@@ -586,11 +597,13 @@ int main() {
 						return 0;
 					default:
 						cout << "Invalid input! Try again!" << endl << endl;
+						cout << menu;
 						continue;
 				}
 			}
 			catch(exception& e) {
 				cout << "Invalid input! Try again!" << endl << endl;
+				cout << menu;
 				continue;
 			}
 	}
