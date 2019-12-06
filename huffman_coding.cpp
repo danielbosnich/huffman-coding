@@ -64,6 +64,7 @@ class HuffmanTree {
 	}
 
 	// In-order tree traversal that looks for a match to the passed coded value, used by decodeString
+	// TODO: Don't need two separate checkForCodedValue methods
 	void checkForCodedValue(Character* node, vector<bool> code, char& result) {
 		if (node == NULL) {
 			return;
@@ -95,7 +96,7 @@ class HuffmanTree {
 			}
 		}
 		else {
-			return '0';
+			return -1;
 		}
 	}
 
@@ -124,7 +125,7 @@ public:
 			Character* second_node = pq.top();
 			pq.pop();
 
-			//add to the list of letters
+			// Add to the list of letters
 			if (first_node->letter != -1) {
 				letters.push_back(first_node->letter);
 			}
@@ -178,9 +179,9 @@ public:
 		print(root);
 	}
 
-	// Prints the coded values
+	// Prints the encoded values
 	void printCodedValues() {
-		cout << "Printing the encoded values" << endl;
+		cout << "Encoded value mapping:" << endl;
 		for (int i = 0; i < letters.size(); ++i) {
 			cout << "'" << letters[i] << "'  =>  ";
 			vector<bool> code = mapping[letters[i]];
@@ -211,33 +212,33 @@ public:
 	// Decodes the passed encoded vector<bool>
 	string decodeString(vector<bool> to_decode) {
 		string decoded_string = "";
-		char result = 0;
+		char result = -1;
 		vector<bool> coded_value;
-		// Read a character from the encoded string and check if it matches the coded
+		// Read a bool from the passed vector and check if it matches the coded
 		// value for a character in the Huffman Tree. If it doesn't, push the next
 		// character and check again. If it does, push the matching character to the
-		// decoded string and reset the string used to check.
+		// decoded string and reset the vector used to check.
 		for (int i = 0; i < to_decode.size(); ++i) {
 			coded_value.push_back(to_decode[i]);
 			checkForCodedValue(root, coded_value, result);
-			if (result != 0) {
+			if (result != -1) {
 				decoded_string += result;
 				coded_value.clear();
-				result = 0;
+				result = -1;
 			}
 		}
 		return decoded_string;
 	}
 
-	// Returns a decoded the passed vector of booleans by determining their corresponding
-	// character values based on the Huffman Coding
+	// Returns a decoded string based on the passed vector of booleans by determining 
+	// their corresponding character values in the Huffman Tree
 	string decodeBits(queue<bool> to_decode) {
 		string encoded_string = "";
-		char result;
+		char result = -1;
 		vector<bool> coded_value;
 		bool next_bool;
 		while (to_decode.size()) {
-			// Read a bool from the passed vector and check if it matches the coded
+			// Read a bool from the passed queue and check if it matches the coded
 			// value for a character in the Huffman Tree. If it doesn't, push the next
 			// bool and check again. If it does, push the matching character to the
 			// decoded string and reset vector of bools used to check.
@@ -245,7 +246,7 @@ public:
 			to_decode.pop();
 			coded_value.push_back(next_bool);
 			result = checkForCodedValue(coded_value);
-			if (result != '0') {
+			if (result != -1) {
 				encoded_string += result;
 				coded_value.clear();
 			}
@@ -269,10 +270,11 @@ priority_queue<Character*, vector<Character*>, CompareChars> countFrequenciesInF
 	}
 
 	int run = 0;
-
 	// Read the file line by line and count letter frequencies
 	while (getline(reader, current_line)) {
-		if (run == 1) { //want to add spaces to the tree to replace newlines. If there is a file that's just words separated by newlines, we want to retain those as spaces and accurately count their frequency in the tree
+		// Want to add spaces to the tree to replace newlines. If there is a file that's just words separated
+		// by newlines, we want to retain those as spaces and accurately count their frequency in the tree.
+		if (run == 1) {
 			char letter = ' ';
 			bool letter_found = false;
 			// Check if the letter has already been created. If so, increment its frequency
@@ -291,8 +293,8 @@ priority_queue<Character*, vector<Character*>, CompareChars> countFrequenciesInF
 		}
 
 		for (char current_letter : current_line) {
-
-			if (int(current_letter) < 32) { //check the ASCII table - these are all empty characters, except spaces.
+			// Check the ASCII table - these are all empty characters, except spaces.
+			if (int(current_letter) < 32) {
 				continue;
 			}
 
@@ -313,7 +315,6 @@ priority_queue<Character*, vector<Character*>, CompareChars> countFrequenciesInF
 		}
 		run++;
 	}
-
 	reader.close();
 
 	// Populate and return the priority queue
@@ -380,7 +381,7 @@ char byteToChar(vector<bool> byte) {
 	int value = 0;
 	for (int i = 0; i < 8; ++i) {
 		if (byte[i]) {
-			int squared = pow(2, 7-i);
+			int squared = pow(2, 7 - i);
 			value = value + squared;
 		}
 	}
@@ -456,7 +457,7 @@ void compressFile(HuffmanTree& tree, string filename) {
 	output_file.close();
 }
 
-// Decompress the passed file
+// Decompress the passed file based on the passed Huffman Coding binary tree
 void decompressFile(HuffmanTree& tree, string filename, string original_filename) {
 	// Open the compressed file
 	ifstream compressed_file;
@@ -494,118 +495,128 @@ void decompressFile(HuffmanTree& tree, string filename, string original_filename
 	decompressed_file.close();
 }
 
-int main() {
-	string input;
-	string menu = "=====MAIN MENU=====\n1.) Compress and decompress a string.\n2.) Compress and decompress a file, but all in print statements, making a Huffman Tree from scratch.\n3.) Compress and decompress a file, but compress into a compressed file, and decompress into a decompressed file, using a premade Huffman Tree.\n4.) Quit^*!\n\n";
-	cout << menu;
-	while(getline(cin, input)) {
-			int input_int;
-			try {
-				input_int = stoi(input);
-				switch(input_int) {
-					case 1:
-						{
-						// Get the string to compress
-						string stringToCompress;
-						cout << "What string do you want to compress?" << endl;
-						getline(cin, stringToCompress);
+// Prints the menu with information on how to use the program
+void printMenu() {
+	cout << "=====MAIN MENU=====" << endl;
+	cout << "1. Compress and decompress a string" << endl;
+	cout << "2. Compress and decompress a file; print output to console" << endl;
+	cout << "3. Compress and decompress a file; create text files in current directory" << endl;
+	cout << "4. Quit!" << endl << endl;
+	return;
+}
 
-						// Create the Huffman Tree based on the priority queue
-						priority_queue<Character*,  vector<Character*>, CompareChars> pq = countFrequencies(stringToCompress);
-						HuffmanTree tree(pq);
-
-						// Print the mapping of coded values
-						cout << endl << "Printing coded values:" << endl;
-						tree.printCodedValues();
-
-						// Print the encoded string, as 1's and 0's
-						cout << endl << "Printing the encoded string:" << endl;
-						vector<bool> compressed_string_bools = tree.encodeString(stringToCompress);
-						for (bool b : compressed_string_bools) {
-							cout << b;
-						}
-						cout << endl;
-
-						// Print the decoded string, from the 1's and 0's above
-						cout << "Printing the decoded string:" << endl;
-						string decoded_string_from_bools = tree.decodeString(compressed_string_bools);
-						cout << decoded_string_from_bools << endl << endl << endl;
-						cout << menu;
-						break;
-						}
-					case 2:
-						{
-						// Get the filename
-						string filename;
-						cout << "Enter the filename or path of the file that you wish to compress." << endl;
-						getline(cin, filename);
-
-						// Create the Huffman Tree based on the priority queue, making the priority_queue based on the frequencies of characters in the file
-						priority_queue<Character*, vector<Character*>, CompareChars> pq = countFrequenciesInFile(filename);
-						HuffmanTree tree(pq);
-
-						// Print the different encoded values
-						tree.printCodedValues();
-
-						//convert the file to a string, replacing '\n' with " ":
-						string fileAsAString;
-						string curr_line;
-						ifstream file(filename);
-						while(getline(file, curr_line)) {
-							fileAsAString += curr_line + " ";
-						}
-						fileAsAString.erase(fileAsAString.find_last_not_of("\t\n\v\f\r ") + 1);
-
-						// Print the encoded string, as 1's and 0's
-						cout << endl << "Printing the encoded string:" << endl;
-						vector<bool> compressed_string_bools = tree.encodeString(fileAsAString);
-						for (bool b : compressed_string_bools) {
-							cout << b;
-						}
-						cout << endl;
-
-						// Print the decoded string, from the 1's and 0's above
-						cout << "Printing the decoded string:" << endl;
-						string decoded_string_from_bools = tree.decodeString(compressed_string_bools);
-						cout << decoded_string_from_bools << endl << endl << endl;
-						cout << menu;
-						break;
-						}
-					case 3:
-						{
-						// Get the filename
-						string fileToCompress;
-						cout << "Enter the filename or path of the file that you wish to compress." << endl;
-						getline(cin, fileToCompress);
-
-						// Create the Huffman Tree based on the priority queue, this time of the most common letters!
-						priority_queue<Character*, vector<Character*>, CompareChars> pq = mostCommonLetters();
-						HuffmanTree tree(pq);
-
-						// Print the different encoded values
-						tree.printCodedValues();
-
-						// Compress and then decompress the passed file
-						string compressed_filename = fileToCompress.substr(0, fileToCompress.find(".txt")) + "_compressed.txt";
-						compressFile(tree, fileToCompress);
-						decompressFile(tree, compressed_filename, fileToCompress);
-						cout << menu;
-						break;
-						}
-					case 4:
-						cout << "Goodbye!" << endl;
-						return 0;
-					default:
-						cout << "Invalid input! Try again!" << endl << endl;
-						cout << menu;
-						continue;
-				}
-			}
-			catch(exception& e) {
-				cout << "Invalid input! Try again!" << endl << endl;
-				cout << menu;
-				continue;
-			}
+// Get user input for either the string to compress or the name of the file to compress
+string getUserInput(bool is_filename) {
+	string user_input;
+	cin.clear();
+	cin.ignore();
+	if (is_filename) {
+		cout << "Enter the filename or path of the file that you wish to compress" << endl;
 	}
+	else {
+		cout << "Enter the string that you wish to compress" << endl;
+	}
+	getline(cin, user_input);
+	cout << endl;
+	return user_input;
+}
 
+int main() {
+	int user_input;
+	bool quit_program = false;
+	while (!quit_program) {
+		printMenu();
+		cin >> user_input;
+		switch (user_input) {
+		case 1:
+		{
+			// Get the string to compress
+			string string_to_compress = getUserInput(false);
+
+			// Create the Huffman Tree based on the priority queue
+			priority_queue<Character*, vector<Character*>, CompareChars> pq = countFrequencies(string_to_compress);
+			HuffmanTree tree(pq);
+
+			// Print the mapping of coded values
+			tree.printCodedValues();
+
+			// Print the encoded string, as 1's and 0's
+			cout << endl << "Encoded string:" << endl;
+			vector<bool> compressed_string_bools = tree.encodeString(string_to_compress);
+			for (bool b : compressed_string_bools) {
+				cout << b;
+			}
+			cout << endl;
+
+			// Print the decoded string, from the 1's and 0's above
+			cout << endl << "Decoded string:" << endl;
+			string decoded_string_from_bools = tree.decodeString(compressed_string_bools);
+			cout << decoded_string_from_bools << endl << endl << endl;
+			break;
+		}
+		case 2:
+		{
+			// Get the filename
+			string filename = getUserInput(true);
+
+			// Create the Huffman Tree based on the priority queue, making the priority_queue based on the 
+			// frequencies of characters in the file
+			priority_queue<Character*, vector<Character*>, CompareChars> pq = countFrequenciesInFile(filename);
+			HuffmanTree tree(pq);
+
+			// Print the different encoded values
+			tree.printCodedValues();
+
+			// Convert the file to a string, replacing '\n' with " ":
+			string file_as_string;
+			string curr_line;
+			ifstream file(filename);
+			while (getline(file, curr_line)) {
+				file_as_string += curr_line + " ";
+			}
+			file_as_string.erase(file_as_string.find_last_not_of("\t\n\v\f\r ") + 1);
+
+			// Print the encoded string, as 1's and 0's
+			cout << endl << "Encoded string:" << endl;
+			vector<bool> compressed_string_bools = tree.encodeString(file_as_string);
+			for (bool b : compressed_string_bools) {
+				cout << b;
+			}
+			cout << endl;
+
+			// Decode and print the string from the 1's and 0's above
+			cout << "Decoded string:" << endl;
+			string decoded_string_from_bools = tree.decodeString(compressed_string_bools);
+			cout << decoded_string_from_bools << endl << endl << endl;
+			break;
+		}
+		case 3:
+		{
+			// Get the filename
+			string file_to_compress = getUserInput(true);
+
+			// Create the Huffman Tree based on the priority queue, this time using the most common letters!
+			priority_queue<Character*, vector<Character*>, CompareChars> pq = mostCommonLetters();
+			HuffmanTree tree(pq);
+
+			// Print the different encoded values
+			tree.printCodedValues();
+
+			// Compress and then decompress the passed file
+			string compressed_filename = file_to_compress.substr(0, file_to_compress.find(".txt")) + "_compressed.txt";
+			compressFile(tree, file_to_compress);
+			decompressFile(tree, compressed_filename, file_to_compress);
+			break;
+		}
+		case 4:
+			cout << "Goodbye!" << endl;
+			quit_program = true;
+			break;
+		default:
+			// If the input is incorrect, prompt the user to try again
+			cin.clear();
+			cin.ignore(INT_MAX, '\n');
+			cout << "Invalid input! Please try again." << endl << endl;
+		}
+	}
 }
