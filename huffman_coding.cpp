@@ -348,7 +348,7 @@ char byteToChar(vector<bool> byte) {
 	for (int i = 0; i < 8; ++i) {
 		if (byte[i]) {
 			int squared = pow(2, 7 - i);
-			value = value + squared;
+			value += squared;
 		}
 	}
 	// Then create the char
