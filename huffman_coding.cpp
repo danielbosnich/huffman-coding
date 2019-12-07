@@ -63,24 +63,11 @@ class HuffmanTree {
 		delete node;
 	}
 
-	// In-order tree traversal that looks for a match to the passed coded value, used by decodeString
-	// TODO: Don't need two separate checkForCodedValue methods
-	void checkForCodedValue(Character* node, vector<bool> code, char& result) {
-		if (node == NULL) {
-			return;
-		}
-		checkForCodedValue(node->left_child, code, result);
-		if (node->letter != -1) {
-			if (mapping[node->letter] == code) {
-				result = node->letter;
-			}
-		}
-		checkForCodedValue(node->right_child, code, result);
-	}
-
-	// Tree traversal that looks for a match to the passed coded value, used by decodeBits
+	// Tree traversal that looks for a match to the passed coded value and returns the character
+	// if a match was found
 	char checkForCodedValue(vector<bool> code) {
 		Character* node = root;
+		// Travel through the tree based on the passed code
 		for (int i = 0; i < code.size(); ++i) {
 			if (code[i] == 0) {
 				node = node->left_child;
@@ -198,36 +185,15 @@ public:
 	}
 
 	// Encodes the passed string
-	vector<bool> encodeString(string to_encode) {
-		vector<bool> encoded_string;
+	queue<bool> encodeString(string to_encode) {
+		queue<bool> encoded_string;
 		for (int i = 0; i < to_encode.size(); ++i) {
 			vector<bool> code = mapping[to_encode[i]];
 			for (int j = 0; j < code.size(); ++j) {
-				encoded_string.push_back(code[j]);
+				encoded_string.push(code[j]);
 			}
 		}
 		return encoded_string;
-	}
-
-	// Decodes the passed encoded vector<bool>
-	string decodeString(vector<bool> to_decode) {
-		string decoded_string = "";
-		char result = -1;
-		vector<bool> coded_value;
-		// Read a bool from the passed vector and check if it matches the coded
-		// value for a character in the Huffman Tree. If it doesn't, push the next
-		// character and check again. If it does, push the matching character to the
-		// decoded string and reset the vector used to check.
-		for (int i = 0; i < to_decode.size(); ++i) {
-			coded_value.push_back(to_decode[i]);
-			checkForCodedValue(root, coded_value, result);
-			if (result != -1) {
-				decoded_string += result;
-				coded_value.clear();
-				result = -1;
-			}
-		}
-		return decoded_string;
 	}
 
 	// Returns a decoded string based on the passed vector of booleans by determining 
@@ -363,7 +329,7 @@ priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(st
 // Builds the priority queue based off of the most commonly used letters
 priority_queue<Character*, vector<Character*>, CompareChars> mostCommonLetters() {
 	priority_queue<Character*, vector<Character*>, CompareChars>  pq;
-	// Most common letters (also including the space and new line characters). No punctuation or numbers.
+	// Most common lowercase letters(also including space and new line characters). No punctuation or numbers.
 	// https://en.wikipedia.org/wiki/Letter_frequency
 	char most_common_chars[28] = { ' ', 'e', 't', 'a', 'o', 'i', 'n', 's', 'h', 'r', 'd', 'l',
 		'c', 'u', 'm', 'w', 'f', 'g', 10, 'y', 'p', 'b', 'v', 'k', 'j', 'x', 'q', 'z' };
@@ -419,7 +385,8 @@ void compressFile(HuffmanTree& tree, string filename) {
 
 	// Open the output file which will contain the compressed version
 	ofstream output_file;
-	output_file.open(filename.substr(0, filename.find(".txt")) + "_compressed.txt", ifstream::binary);
+	string compressed_filename = filename.substr(0, filename.find(".txt")) + "_compressed.txt";
+	output_file.open(compressed_filename, ifstream::binary);
 
 	// Go through the bits, create a byte for each section of 8, determine the corresonding
 	// ASCII character, and then write that character to the output file
@@ -508,7 +475,6 @@ void printMenu() {
 // Get user input for either the string to compress or the name of the file to compress
 string getUserInput(bool is_filename) {
 	string user_input;
-	cin.clear();
 	cin.ignore();
 	if (is_filename) {
 		cout << "Enter the filename or path of the file that you wish to compress" << endl;
@@ -542,15 +508,17 @@ int main() {
 
 			// Print the encoded string, as 1's and 0's
 			cout << endl << "Encoded string:" << endl;
-			vector<bool> compressed_string_bools = tree.encodeString(string_to_compress);
-			for (bool b : compressed_string_bools) {
-				cout << b;
+			queue<bool> compressed_string_bools = tree.encodeString(string_to_compress);
+			queue<bool> print_bools = compressed_string_bools;
+			while (print_bools.size()) {
+				cout << print_bools.front();
+				print_bools.pop();
 			}
 			cout << endl;
 
 			// Print the decoded string, from the 1's and 0's above
 			cout << endl << "Decoded string:" << endl;
-			string decoded_string_from_bools = tree.decodeString(compressed_string_bools);
+			string decoded_string_from_bools = tree.decodeBits(compressed_string_bools);
 			cout << decoded_string_from_bools << endl << endl << endl;
 			break;
 		}
@@ -578,15 +546,17 @@ int main() {
 
 			// Print the encoded string, as 1's and 0's
 			cout << endl << "Encoded string:" << endl;
-			vector<bool> compressed_string_bools = tree.encodeString(file_as_string);
-			for (bool b : compressed_string_bools) {
-				cout << b;
+			queue<bool> compressed_string_bools = tree.encodeString(file_as_string);
+			queue<bool> print_bools = compressed_string_bools;
+			while (print_bools.size()) {
+				cout << print_bools.front();
+				print_bools.pop();
 			}
 			cout << endl;
 
 			// Decode and print the string from the 1's and 0's above
 			cout << "Decoded string:" << endl;
-			string decoded_string_from_bools = tree.decodeString(compressed_string_bools);
+			string decoded_string_from_bools = tree.decodeBits(compressed_string_bools);
 			cout << decoded_string_from_bools << endl << endl << endl;
 			break;
 		}
