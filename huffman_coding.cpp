@@ -221,107 +221,74 @@ public:
 	}
 };
 
-// Function that counts the frequencies of all letters in a file
+// Counts the frequencies of all characters in a file
 priority_queue<Character*, vector<Character*>, CompareChars> countFrequenciesInFile(string filename) {
 	vector<Character*> all_chars;
-	ifstream reader;
-	string current_line;
-	reader.open(filename);
+	ifstream input_file;
+	char current_char;
+	input_file.open(filename);
 
 	// Make sure the file was opened successfully
-	if (!reader.is_open()) {
+	if (!input_file.is_open()) {
 		cout << "Error opening file!" << endl;
 		priority_queue<Character*, vector<Character*>, CompareChars>  pq;
 		return pq;
 	}
 
-	int run = 0;
-	// Read the file line by line and count letter frequencies
-	while (getline(reader, current_line)) {
-		// Want to add spaces to the tree to replace newlines. If there is a file that's just words separated
-		// by newlines, we want to retain those as spaces and accurately count their frequency in the tree.
-		if (run == 1) {
-			char letter = ' ';
-			bool letter_found = false;
-			// Check if the letter has already been created. If so, increment its frequency
-			for (int i = 0; i < all_chars.size(); i++) {
-				if (letter == all_chars[i]->letter) {
-					letter_found = true;
-					++all_chars[i]->freq;
-					break;
-				}
-			}
-			// If the letter doesn't exist then create the Character object
-			if (!letter_found) {
-				Character* ch = new Character(letter, 1);
-				all_chars.push_back(ch);
+	// Read the file character by character and count character frequencies
+	while (input_file.get(current_char)) {
+		bool char_found = false;
+		// Check if the character has already been created. If so, increment its frequency
+		for (int i = 0; i < all_chars.size(); ++i) {
+			if (current_char == all_chars[i]->letter) {
+				char_found = true;
+				++all_chars[i]->freq;
+				break;
 			}
 		}
-
-		for (char current_letter : current_line) {
-			// Check the ASCII table - these are all empty characters, except spaces.
-			if (int(current_letter) < 32) {
-				continue;
-			}
-
-			bool letter_found = false;
-			// Check if the letter has already been created. If so, increment its frequency
-			for (int i = 0; i < all_chars.size(); i++) {
-				if (current_letter == all_chars[i]->letter) {
-					letter_found = true;
-					++all_chars[i]->freq;
-					break;
-				}
-			}
-			// If the letter doesn't exist then create the Character object
-			if (!letter_found) {
-				Character* ch = new Character(current_letter, 1);
-				all_chars.push_back(ch);
-			}
+		// If the character doesn't exist then create the Character object
+		if (!char_found) {
+			Character* ch = new Character(current_char, 1);
+			all_chars.push_back(ch);
 		}
-		run++;
 	}
-	reader.close();
+	input_file.close();
 
 	// Populate and return the priority queue
 	priority_queue<Character*, vector<Character*>, CompareChars>  pq;
-	for (Character* letter : all_chars) {
-		pq.push(letter);
+	for (Character* char_node : all_chars) {
+		pq.push(char_node);
 	}
 	return pq;
 }
 
-// Function that counts the frequencies of all letters in a string
+// Counts the frequencies of all characters in a string
 priority_queue<Character*, vector<Character*>, CompareChars> countFrequencies(string str) {
 	int run = 0;
 	vector<Character*> all_chars;
 
 	// Read the file line by line and count letter frequencies
-	for (char current_letter : str) {
-		if (int(current_letter) < 32) { //check the ASCII table - these are all empty characters, except spaces.
-			continue;
-		}
-
-		bool letter_found = false;
+	for (char current_char : str) {
+		bool char_found = false;
 		// Check if the letter has already been created. If so, increment its frequency
 		for (int i = 0; i < all_chars.size(); i++) {
-			if (current_letter == all_chars[i]->letter) {
-				letter_found = true;
+			if (current_char == all_chars[i]->letter) {
+				char_found = true;
 				++all_chars[i]->freq;
 				break;
 			}
 		}
 		// If the letter doesn't exist then create the Character object
-		if (!letter_found) {
-			Character* ch = new Character(current_letter, 1);
+		if (!char_found) {
+			Character* ch = new Character(current_char, 1);
 			all_chars.push_back(ch);
 		}
 	}
 
 	// Populate and return the priority queue
 	priority_queue<Character*, vector<Character*>, CompareChars>  pq;
-	for (Character* letter : all_chars) {
-		pq.push(letter);
+	for (Character* char_node : all_chars) {
+		pq.push(char_node);
 	}
 	return pq;
 }
@@ -356,7 +323,7 @@ char byteToChar(vector<bool> byte) {
 	return coded_char;
 }
 
-// Compress the passed text file based on the passed Huffman Coding binary tree
+// Compresses the passed text file based on the passed Huffman Coding binary tree
 void compressFile(HuffmanTree& tree, string filename) {
 	// Encode the passed text file and write it to a new 'compressed' text file
 	queue<bool> bits;
@@ -424,7 +391,7 @@ void compressFile(HuffmanTree& tree, string filename) {
 	output_file.close();
 }
 
-// Decompress the passed file based on the passed Huffman Coding binary tree
+// Decompresses the passed file based on the passed Huffman Coding binary tree
 void decompressFile(HuffmanTree& tree, string filename, string original_filename) {
 	// Open the compressed file
 	ifstream compressed_file;
@@ -472,8 +439,8 @@ void printMenu() {
 	return;
 }
 
-// Get user input for either the string to compress or the name of the file to compress
-string getUserInput(bool is_filename) {
+// Gets user input for either the string to compress or the name of the file to compress
+string getUserInput(bool is_filename, string message = "") {
 	string user_input;
 	cin.ignore();
 	if (is_filename) {
@@ -481,6 +448,10 @@ string getUserInput(bool is_filename) {
 	}
 	else {
 		cout << "Enter the string that you wish to compress" << endl;
+	}
+	// Print the message if one was passed
+	if (message != "") {
+		cout << message << endl;
 	}
 	getline(cin, user_input);
 	cout << endl;
@@ -535,14 +506,13 @@ int main() {
 			// Print the different encoded values
 			tree.printCodedValues();
 
-			// Convert the file to a string, replacing '\n' with " ":
+			// Convert the file to a string
 			string file_as_string;
-			string curr_line;
-			ifstream file(filename);
-			while (getline(file, curr_line)) {
-				file_as_string += curr_line + " ";
+			char next_char;
+			ifstream input_file(filename);
+			while (input_file.get(next_char)) {
+				file_as_string += next_char;
 			}
-			file_as_string.erase(file_as_string.find_last_not_of("\t\n\v\f\r ") + 1);
 
 			// Print the encoded string, as 1's and 0's
 			cout << endl << "Encoded string:" << endl;
@@ -555,7 +525,7 @@ int main() {
 			cout << endl;
 
 			// Decode and print the string from the 1's and 0's above
-			cout << "Decoded string:" << endl;
+			cout << endl << "Decoded string:" << endl;
 			string decoded_string_from_bools = tree.decodeBits(compressed_string_bools);
 			cout << decoded_string_from_bools << endl << endl << endl;
 			break;
@@ -563,7 +533,8 @@ int main() {
 		case 3:
 		{
 			// Get the filename
-			string file_to_compress = getUserInput(true);
+			string message = "*File should only contain lower case letters and no punctuation*";
+			string file_to_compress = getUserInput(true, message);
 
 			// Create the Huffman Tree based on the priority queue, this time using the most common letters!
 			priority_queue<Character*, vector<Character*>, CompareChars> pq = mostCommonLetters();
