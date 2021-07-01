@@ -4,6 +4,7 @@ Script that implements Huffman Coding assuming UTF-8 encoding
 
 import argparse
 from operator import attrgetter
+import os
 
 
 class Node():
@@ -25,7 +26,7 @@ class Node():
 class HuffmanCoding():
     """Class that implements Huffman Coding"""
     def __init__(self, filepath):
-        """Initializes a HuffmanCoding object
+        """Initializes a Huffman Coding object
 
         Args:
             filepath (str): File to either encode or decode
@@ -39,7 +40,7 @@ class HuffmanCoding():
         """Pre-order traversal of the binary tree to determine the code for each node
 
         Args:
-            node: Current Node object in the traversal
+            node (Node): Current Node object in the traversal
             path (list): Binary path to the passed node
         """
         if node.char is not None:
@@ -56,8 +57,11 @@ class HuffmanCoding():
 
     def get_char_frequencies(self):
         """Reads the input file and determines the character frequencies"""
-        with open(self.file, 'r') as input_file:
-            for char in input_file.read():
+        with open(self.file, encoding='utf-8') as input_file:
+            while True:
+                if not (char := input_file.read(1)):
+                    break
+
                 if char in self.char_count:
                     self.char_count[char] += 1
                 else:
@@ -84,42 +88,91 @@ class HuffmanCoding():
 
         self.parent = parent_node
 
-        # Set the encoding of all nodes
+        # Set the codes for all nodes
         self.set_codes(parent_node, [])
 
-        self.encode_file()
-
     def encode_file(self):
-        """Encodes the filepath"""
+        """Compresses the file"""
+        self.create_huffman_codes()
         dot_index = self.file.rfind('.')
         compressed_filename = self.file[:dot_index] + '_compressed' + self.file[dot_index:]
         bit_buffer = ''
-        with open(compressed_filename, 'w') as output_file:
-            with open(self.file, 'r') as input_file:
+        with open(compressed_filename, 'w', encoding='utf-8', newline='') as output_file:
+            with open(self.file, encoding='utf-8') as input_file:
                 # First, write the codes so the file can be uncompressed
                 for char, code in self.char_codes.items():
-                    output_file.write(f'{char},{code}; ')
+                    output_file.write(f'{char}~={code}><')
+                output_file.write('\n$\n')
 
-                # Read the file character by character and compress the data
-                # 7 bytes at a time
-                for char in input_file.read():
+                # Read the characters and encode 7 bits at a time
+                while True:
+                    if not (char := input_file.read(1)):
+                        break
+
                     bit_buffer += self.char_codes[char]
-
-                    if len(bit_buffer) > 7:
+                    while len(bit_buffer) > 7:
                         encoded_char = chr(int(bit_buffer[:7], 2))
                         output_file.write(encoded_char)
                         bit_buffer = bit_buffer[7:]
 
-            # Encode any remaining characters
+            # Encode any remaining bits
             if bit_buffer:
                 encoded_char = chr(int(bit_buffer, 2))
                 output_file.write(encoded_char)
+
+    def decode_file(self):
+        """Uncompresses the compressed file"""
+        input_file_size = os.stat(self.file).st_size
+        dot_index = self.file.rfind('.')
+        uncompressed_file = (self.file[:dot_index]
+                             + '_uncompressed'
+                             + self.file[dot_index:])
+        with open(self.file, encoding='utf-8', newline='') as input_file:
+            with open(uncompressed_file, 'w', encoding='utf-8') as output_file:
+                offset = 0
+                # Read the codes and save them to the instance dictionary
+                codes = ''
+                for line in input_file:
+                    offset += len(line)
+                    if line == '$\n':
+                        break
+                    codes += line
+
+                for value in codes.split('><')[:-1]:
+                    char, code = value.split('~=')
+                    self.char_codes[code] = char
+
+                # Then read and decode the rest of the file
+                bits = ''
+                to_check = ''
+                while True:
+                    if not (char := input_file.read(1)):
+                        break
+
+                    # The last character needs to use 'b' as the format spec
+                    # so that the bit string is not padded with zeros
+                    offset += 1
+                    if offset == input_file_size:
+                        bits += format(ord(char), 'b')
+                    else:
+                        bits += format(ord(char), '07b')
+
+                    while bits:
+                        to_check += bits[0]
+                        bits = bits[1:]
+                        try:
+                            char = self.char_codes[to_check]
+                        except KeyError:
+                            pass
+                        else:
+                            output_file.write(char)
+                            to_check = ''
 
 
 def parse_args():
     """Parses the passed arguments"""
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', type=str, help='Compress or Decompress')
+    parser.add_argument('action', type=str, help='Compress or Uncompress')
     parser.add_argument('file', type=str, help='File to perform action on')
     args = parser.parse_args()
     return args.action.lower(), args.file
@@ -129,11 +182,11 @@ def main():
     action, filepath = parse_args()
     huffman_obj = HuffmanCoding(filepath)
     if action == 'compress':
-        huffman_obj.create_huffman_codes()
-    elif action == 'decompress':
-        print('Trying to decompress')
+        huffman_obj.encode_file()
+    elif action == 'uncompress':
+        huffman_obj.decode_file()
     else:
-        print('Invalid action. Should be Compress or Decompress')
+        print('Invalid action. Should be Compress or Uncompress')
 
 if __name__ == '__main__':
     main()
