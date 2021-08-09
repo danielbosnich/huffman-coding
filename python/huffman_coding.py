@@ -41,19 +41,20 @@ class HuffmanCoding():
 
         Args:
             node (Node): Current Node object in the traversal
-            path (list): Binary path to the passed node
+            path (str): Binary path to the passed node
+        Returns:
+            str: Binary path to the parent node
         """
         if node.char is not None:
-            path_str = ''.join(str(value) for value in path)
-            self.char_codes[node.char] = path_str
+            self.char_codes[node.char] = path
         if node.left is not None:
-            path.append(0)
-            self.set_codes(node.left, path)
+            path += '0'
+            path = self.set_codes(node.left, path)
         if node.right is not None:
-            path.append(1)
-            self.set_codes(node.right, path)
-        if path:
-            del path[-1]
+            path += '1'
+            path = self.set_codes(node.right, path)
+
+        return path[:-1]
 
     def get_char_frequencies(self):
         """Reads the input file and determines the character frequencies"""
@@ -89,7 +90,7 @@ class HuffmanCoding():
         self.parent = parent_node
 
         # Set the codes for all nodes
-        self.set_codes(parent_node, [])
+        self.set_codes(parent_node, '')
 
     def encode_file(self):
         """Compresses the file"""
