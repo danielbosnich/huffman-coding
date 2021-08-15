@@ -6,6 +6,8 @@ For our final project in Data Structures at CU, Pravan Subramanian and I wrote a
 
 Since then, I've decided to expand on this repo by implementing Huffman Coding in additional programming languages.  First up was Python!  This program includes the character keys at the beginning of the compressed file so that any file compressed by the program can also be uncompressed.
 
+Next up was Go!
+
 ## Python program usage
 
 ```
