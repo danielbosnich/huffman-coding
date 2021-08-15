@@ -22,6 +22,7 @@ class HuffmanCodingTests(TestCase):
     def setUpClass(cls):
         """Determines the test directory"""
         test_file_dir = Path.cwd().joinpath('test')
+        print('Test file dir:', test_file_dir)
         cls.test_filepath = str(
             test_file_dir.joinpath(TEST_FILENAME)
         )
