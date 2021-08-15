@@ -102,7 +102,12 @@ func writeCompressedFile(inputFilepath string) {
 	}
 	defer inputFile.Close()
 
-	outputFile, err := os.Create("compressed_file.txt")
+	// Determine the output filepath
+	file_details := strings.Split(inputFilepath, ".")
+	filename := file_details[0]
+	extension := file_details[1]
+	compressed_filename := filename + "_compressed." + extension
+	outputFile, err := os.Create(compressed_filename)
 	if err != nil {
 		fmt.Println("There was an error opening the output file!")
 		return
@@ -207,7 +212,12 @@ func uncompress(inputFilepath string) {
 	}
 	defer inputFile.Close()
 
-	outputFile, err := os.Create("uncompressed_file.txt")
+	// Determine the output filepath
+	file_details := strings.Split(inputFilepath, ".")
+	filename := file_details[0]
+	extension := file_details[1]
+	compressed_filename := filename + "_uncompressed." + extension
+	outputFile, err := os.Create(compressed_filename)
 	if err != nil {
 		fmt.Println("There was an error opening the output file!")
 		return
@@ -230,7 +240,6 @@ func uncompress(inputFilepath string) {
 				readingCodes = false
 			}
 		} else {
-			fmt.Println("Reading the next line")
 			for _, char := range line {
 				bits += fmt.Sprintf("%07b", char)
 			}
@@ -261,10 +270,8 @@ func main() {
 	filepath := os.Args[2]
 
 	if action == "compress" {
-		fmt.Println("Compressing the file:", filepath)
 		compress(filepath)
 	} else if action == "uncompress" {
-		fmt.Println("Uncompressing the file:", filepath)
 		uncompress(filepath)
 	} else {
 		fmt.Println("Invalid action type")
