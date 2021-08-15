@@ -6,4 +6,4 @@ install:
   - pip install pylint
 script:
   - python -m unittest
-  - pylint python
+  - pylint python/huffman_coding.py

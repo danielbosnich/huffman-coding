@@ -7,7 +7,7 @@ from operator import attrgetter
 import os
 
 
-class Node():
+class Node():  # pylint: disable=too-few-public-methods
     """Class that represents a node in the tree"""
     def __init__(self, *, count, char=None):
         """Initializes a Node object
