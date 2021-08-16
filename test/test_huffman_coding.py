@@ -55,7 +55,7 @@ class HuffmanCodingTests(TestCase):
                 for original_line in original_file:
                     uncompressed_line = uncompressed_file.readline()
                     self.assertEqual(original_line, uncompressed_line)
-            
+
                 # Lastly, try reading another line and ensure it is an empty string
                 next_line = uncompressed_file.readline()
                 self.assertEqual('', next_line)
