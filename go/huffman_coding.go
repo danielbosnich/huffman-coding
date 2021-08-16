@@ -4,6 +4,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strconv"
@@ -32,12 +33,14 @@ func getCharFrequencies(inputFilepath string) {
 	defer inputFile.Close()
 
 	charCount = make(map[rune]int)
-	scanner := bufio.NewScanner(inputFile)
-	for scanner.Scan() {
-		line := scanner.Text()
-		for _, char := range line {
-			charCount[char] += 1
+	reader := bufio.NewReader(inputFile)
+	for {
+		// TODO: Ensure the size is not greater than 1
+		char, _, err := reader.ReadRune()
+		if err == io.EOF {
+			break
 		}
+		charCount[char] += 1
 	}
 }
 
@@ -116,7 +119,7 @@ func writeCompressedFile(inputFilepath string) {
 
 	// Open the output file and input file
 	writer := bufio.NewWriter(outputFile)
-	scanner := bufio.NewScanner(inputFile)
+	reader := bufio.NewReader(inputFile)
 
 	// First, write the codes to the compressed file
 	for char, code := range huffmanCodes {
@@ -127,25 +130,27 @@ func writeCompressedFile(inputFilepath string) {
 
 	// Read the input file characters and encode 7 bits at a time
 	bitBuffer := ""
-	for scanner.Scan() {
-		line := scanner.Text()
-		for _, char := range line {
-			bitBuffer += huffmanCodes[char]
+	for {
+		char, _, err := reader.ReadRune()
+		if err == io.EOF {
+			break
+		}
 
-			for {
-				if len(bitBuffer) < 7 {
-					break
-				}
-
-				intValue, _ := strconv.ParseInt(bitBuffer[:7], 2, 8)
-				bitBuffer = bitBuffer[7:]
-				char := rune(intValue)
-				writer.WriteString(string(char))
+		bitBuffer += huffmanCodes[char]
+		for {
+			if len(bitBuffer) < 7 {
+				break
 			}
+
+			intValue, _ := strconv.ParseInt(bitBuffer[:7], 2, 8)
+			bitBuffer = bitBuffer[7:]
+			char := rune(intValue)
+			writer.WriteString(string(char))
 		}
 	}
 
 	// Encode any remaining bits
+	fmt.Println(bitBuffer)
 	intValue, _ := strconv.ParseInt(bitBuffer, 2, 8)
 	char := rune(intValue)
 	writer.WriteString(string(char))
@@ -163,26 +168,26 @@ func compress(inputFile string) {
 }
 
 // readCodes reads the character codes from the compressed file
-func readCodes(inputFilepath string) {
+func readCodes(inputFilepath string) int {
 	inputFile, err := os.Open(inputFilepath)
 	if err != nil {
 		fmt.Println("There was an error opening the input file!")
-		return
+		return 0
 	}
 	defer inputFile.Close()
 
-	scanner := bufio.NewScanner(inputFile)
-
-	// Read the character frequencies
+	numBytesRead := 0
 	charCodes = make(map[string]rune)
+	reader := bufio.NewReader(inputFile)
 	codes := ""
-	for scanner.Scan() {
-		line := scanner.Text()
+	for {
+		char, _, _ := reader.ReadRune()
+		codes += string(char)
+		numBytesRead += 1
 
-		if line == "$" {
+		if (char == 10) && (codes[numBytesRead-2] == 36) {
 			break
 		}
-		codes += line
 	}
 
 	allCodes := strings.Split(codes, "><")
@@ -197,12 +202,14 @@ func readCodes(inputFilepath string) {
 		code := parsedDetails[1]
 		charCodes[code] = runes[0]
 	}
+
+	return numBytesRead
 }
 
 // uncompress parses and decodes the passed file
 func uncompress(inputFilepath string) {
 	// First, read the codes
-	readCodes(inputFilepath)
+	lenCodeBytes := int64(readCodes(inputFilepath))
 
 	// Open both files
 	inputFile, err := os.Open(inputFilepath)
@@ -226,36 +233,41 @@ func uncompress(inputFilepath string) {
 
 	// Open the output file and input file
 	writer := bufio.NewWriter(outputFile)
-	scanner := bufio.NewScanner(inputFile)
+	reader := bufio.NewReader(inputFile)
 
 	// Read the rest of the input file and write characters to the output file as they are found
 	bits := ""
 	toCheck := ""
-	readingCodes := true
-	for scanner.Scan() {
-		line := scanner.Text()
+	inputFile.Seek(lenCodeBytes, 0)
+	fileInfo, _ := os.Stat(inputFilepath)
+	fileSize := fileInfo.Size()
+	numBytesRead := lenCodeBytes
+	for {
+		char, _, err := reader.ReadRune()
+		if err == io.EOF {
+			break
+		}
 
-		if readingCodes {
-			if line == "$" {
-				readingCodes = false
-			}
+		// The last character needs to use 'b' as the format spec
+		// so that the bit string is not padded with zeros
+		numBytesRead += 1
+		if numBytesRead == fileSize {
+			bits += fmt.Sprintf("%b", char)
+			bits += "0"
 		} else {
-			for _, char := range line {
-				bits += fmt.Sprintf("%07b", char)
+			bits += fmt.Sprintf("%07b", char)
+		}
+		for {
+			if len(bits) == 0 {
+				break
 			}
 
-			for {
-				if len(bits) == 0 {
-					break
-				}
+			toCheck += string(bits[0])
+			bits = bits[1:]
 
-				toCheck += string(bits[0])
-				bits = bits[1:]
-
-				if decodedChar, exists := charCodes[toCheck]; exists {
-					writer.WriteString(string(decodedChar))
-					toCheck = ""
-				}
+			if decodedChar, exists := charCodes[toCheck]; exists {
+				writer.WriteString(string(decodedChar))
+				toCheck = ""
 			}
 		}
 	}
