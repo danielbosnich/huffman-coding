@@ -3,7 +3,6 @@ package huffman
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -36,7 +35,6 @@ func TestCompareFiles(t *testing.T) {
 	testFilepath := filepath.Join(testDir, testFilename)
 	testCompressedFilepath := filepath.Join(testDir, testCompressedFilename)
 	testUncompressedFilepath := filepath.Join(testDir, testUncompressedFilename)
-	fmt.Println("Trying to open the following file", testFilepath)
 	defer os.Remove(testCompressedFilepath)
 	defer os.Remove(testUncompressedFilepath)
 
