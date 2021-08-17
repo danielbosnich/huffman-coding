@@ -1,5 +1,5 @@
 // Script that implements Huffman Coding assuming UTF-8 encoding
-package main
+package huffman
 
 import (
 	"bufio"
@@ -150,7 +150,6 @@ func writeCompressedFile(inputFilepath string) {
 	}
 
 	// Encode any remaining bits
-	fmt.Println(bitBuffer)
 	intValue, _ := strconv.ParseInt(bitBuffer, 2, 8)
 	char := rune(intValue)
 	writer.WriteString(string(char))
@@ -158,8 +157,8 @@ func writeCompressedFile(inputFilepath string) {
 	writer.Flush()
 }
 
-// compress encodes the passed file
-func compress(inputFile string) {
+// Compress encodes the passed file
+func Compress(inputFile string) {
 	getCharFrequencies(inputFile)
 	createHuffmanTree()
 	huffmanCodes = make(map[rune]string)
@@ -206,8 +205,8 @@ func readCodes(inputFilepath string) int {
 	return numBytesRead
 }
 
-// uncompress parses and decodes the passed file
-func uncompress(inputFilepath string) {
+// Uncompress parses and decodes the passed file
+func Uncompress(inputFilepath string) {
 	// First, read the codes
 	lenCodeBytes := int64(readCodes(inputFilepath))
 
@@ -273,19 +272,4 @@ func uncompress(inputFilepath string) {
 	}
 
 	writer.Flush()
-}
-
-// Runs the script
-func main() {
-	action := os.Args[1]
-	action = strings.ToLower(action)
-	filepath := os.Args[2]
-
-	if action == "compress" {
-		compress(filepath)
-	} else if action == "uncompress" {
-		uncompress(filepath)
-	} else {
-		fmt.Println("Invalid action type")
-	}
 }
