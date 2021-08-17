@@ -42,7 +42,7 @@ class HuffmanCodingTests(TestCase):
         """Tests compressing a file using Huffman Coding"""
         huffman_obj = HuffmanCoding(self.test_filepath)
         huffman_obj.encode_file()
-    
+
     def test_2_uncompress_file(self):
         """Tests uncompressing the compressed file"""
         huffman_obj = HuffmanCoding(self.compressed_filepath)
