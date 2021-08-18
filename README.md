@@ -1,6 +1,5 @@
 # huffman-coding
 
-[![Build Status](https://travis-ci.com/danielbosnich/huffman-coding.svg?branch=master)](https://travis-ci.com/danielbosnich/huffman-coding)
 ![Go status](https://github.com/danielbosnich/huffman-coding/actions/workflows/go.yml/badge.svg)
 ![Python status](https://github.com/danielbosnich/huffman-coding/actions/workflows/python.yml/badge.svg)
 
