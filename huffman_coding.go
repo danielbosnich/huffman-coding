@@ -27,6 +27,7 @@ type Node struct {
 func getCharFrequencies(inputFilepath string) {
 	inputFile, err := os.Open(inputFilepath)
 	if err != nil {
+		fmt.Println(err)
 		fmt.Println("There was an error opening the input file!")
 		return
 	}

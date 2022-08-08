@@ -45,7 +45,7 @@ func TestCompareFiles(t *testing.T) {
 	// Open both files
 	originalFile, err := os.Open(testFilepath)
 	if err != nil {
-		t.Error("There was an error opening the original file!")
+		t.Errorf("There was an error opening the original file: %v", originalFile)
 		return
 	}
 	defer originalFile.Close()
