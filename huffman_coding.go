@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -108,10 +109,11 @@ func writeCompressedFile(inputFilepath string) {
 	defer inputFile.Close()
 
 	// Determine the output filepath
-	file_details := strings.Split(inputFilepath, ".")
+	dir, file := filepath.Split(inputFilepath)
+	file_details := strings.Split(file, ".")
 	filename := file_details[0]
 	extension := file_details[1]
-	compressed_filename := filename + "_compressed." + extension
+	compressed_filename := dir + filename + "_compressed." + extension
 	outputFile, err := os.Create(compressed_filename)
 	if err != nil {
 		fmt.Println("There was an error opening the output file!")
@@ -223,10 +225,11 @@ func Uncompress(inputFilepath string) {
 	defer inputFile.Close()
 
 	// Determine the output filepath
-	file_details := strings.Split(inputFilepath, ".")
+	dir, file := filepath.Split(inputFilepath)
+	file_details := strings.Split(file, ".")
 	filename := file_details[0]
 	extension := file_details[1]
-	compressed_filename := filename + "_uncompressed." + extension
+	compressed_filename := dir + filename + "_uncompressed." + extension
 	outputFile, err := os.Create(compressed_filename)
 	if err != nil {
 		fmt.Println(err)
