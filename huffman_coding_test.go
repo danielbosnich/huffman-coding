@@ -17,17 +17,9 @@ var testUncompressedFilename = "plrabn12_compressed_uncompressed.txt"
 
 // Ensures that the original file matches the uncompressed file
 func TestCompareFiles(t *testing.T) {
-	// Determine operating system before setting the file paths
-	relativeTestDir := ""
-	if runtime.GOOS == "windows" {
-		relativeTestDir = "\\test"
-	} else {
-		relativeTestDir = "/test"
-	}
-
 	_, currentFilePath, _, _ := runtime.Caller(0)
 	cwd := filepath.Dir(currentFilePath)
-	testDir := cwd + relativeTestDir
+	testDir := filepath.Join(cwd, "test")
 
 	testFilepath := filepath.Join(testDir, testFilename)
 	testCompressedFilepath := filepath.Join(testDir, testCompressedFilename)
