@@ -27,6 +27,7 @@ type Node struct {
 func getCharFrequencies(inputFilepath string) {
 	inputFile, err := os.Open(inputFilepath)
 	if err != nil {
+		fmt.Println(err)
 		fmt.Println("There was an error opening the input file!")
 		return
 	}
@@ -100,6 +101,7 @@ func writeCompressedFile(inputFilepath string) {
 	// Open both files
 	inputFile, err := os.Open(inputFilepath)
 	if err != nil {
+		fmt.Println(err)
 		fmt.Println("There was an error opening the input file!")
 		return
 	}
@@ -170,6 +172,7 @@ func Compress(inputFile string) {
 func readCodes(inputFilepath string) int {
 	inputFile, err := os.Open(inputFilepath)
 	if err != nil {
+		fmt.Println(err)
 		fmt.Println("There was an error opening the input file!")
 		return 0
 	}
@@ -213,6 +216,7 @@ func Uncompress(inputFilepath string) {
 	// Open both files
 	inputFile, err := os.Open(inputFilepath)
 	if err != nil {
+		fmt.Println(err)
 		fmt.Println("There was an error opening the input file!")
 		return
 	}
@@ -225,6 +229,7 @@ func Uncompress(inputFilepath string) {
 	compressed_filename := filename + "_uncompressed." + extension
 	outputFile, err := os.Create(compressed_filename)
 	if err != nil {
+		fmt.Println(err)
 		fmt.Println("There was an error opening the output file!")
 		return
 	}

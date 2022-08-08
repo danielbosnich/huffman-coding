@@ -3,6 +3,7 @@ package huffman
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -41,13 +42,15 @@ func TestCompareFiles(t *testing.T) {
 	// Open both files
 	originalFile, err := os.Open(testFilepath)
 	if err != nil {
-		t.Errorf("There was an error opening the original file: %v", originalFile)
+		fmt.Println(err)
+		t.Error("There was an error opening the original file!")
 		return
 	}
 	defer originalFile.Close()
 
 	uncompressedFile, err := os.Open(testUncompressedFilepath)
 	if err != nil {
+		fmt.Println(err)
 		t.Error("There was an error opening the uncompressed file!")
 	}
 	defer uncompressedFile.Close()
