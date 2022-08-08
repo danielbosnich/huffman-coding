@@ -7,18 +7,21 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 )
 
-var testFilename = "plrabn12.txt"
-var testCompressedFilename = "plrabn12_compressed.txt"
-var testUncompressedFilename = "plrabn12_compressed_uncompressed.txt"
+const (
+	testFilename             = "plrabn12.txt"
+	testCompressedFilename   = "plrabn12_compressed.txt"
+	testUncompressedFilename = "plrabn12_compressed_uncompressed.txt"
+)
 
 // Ensures that the original file matches the uncompressed file
 func TestCompareFiles(t *testing.T) {
-	_, currentFilePath, _, _ := runtime.Caller(0)
-	cwd := filepath.Dir(currentFilePath)
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Errorf("Unable to determine the current working directory. err: %v", err)
+	}
 	testDir := filepath.Join(cwd, "test")
 
 	testFilepath := filepath.Join(testDir, testFilename)
