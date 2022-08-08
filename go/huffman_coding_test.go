@@ -22,7 +22,7 @@ func TestCompareFiles(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unable to determine the current working directory. err: %v", err)
 	}
-	testDir := filepath.Join(cwd, "test")
+	testDir := filepath.Join(cwd, "..", "test")
 
 	testFilepath := filepath.Join(testDir, testFilename)
 	testCompressedFilepath := filepath.Join(testDir, testCompressedFilename)
