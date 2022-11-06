@@ -146,13 +146,11 @@ class HuffmanCoding():
                 # Then read and decode the rest of the file
                 bits = ''
                 to_check = ''
-                while True:
-                    if not (char := input_file.read(1)):
-                        break
+                while char := input_file.read(1):
+                    offset += 1
 
                     # The last character needs to use 'b' as the format spec
                     # so that the bit string is not padded with zeros
-                    offset += 1
                     if offset == input_file_size:
                         bits += format(ord(char), 'b')
                     else:
