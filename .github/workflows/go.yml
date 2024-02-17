@@ -28,4 +28,6 @@ jobs:
         go-version: ${{ matrix.go-version }}
 
     - name: Test
-      run: go test -v
+      run:
+        go version
+        go test -v
