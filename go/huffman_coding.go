@@ -3,276 +3,254 @@ package huffman
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 )
 
-var charCount map[rune]int
-var huffmanCodes map[rune]string
-var charCodes map[string]rune
-var nodes []Node
+const (
+	codesDelimeter rune = 128
+
+	delimeterBetweenCharAndCode = "~="
+	delimeterBetweenCharacters  = "><"
+)
 
 type Node struct {
 	count int
-	char  rune
+	char  *rune
 	left  *Node
 	right *Node
 }
 
-// getCharFrequencies counts the character frequencies
-func getCharFrequencies(inputFilepath string) {
+// Compress encodes the passed file
+func Compress(inputFile string) error {
+	charCounts, err := getCharFrequencies(inputFile)
+	if err != nil {
+		return fmt.Errorf("failed to calculate character frequencies: %w", err)
+	}
+
+	headNode := createHuffmanTree(charCounts)
+	huffmanCodes := make(map[rune]string)
+	generateCodes(headNode, huffmanCodes, "")
+
+	err = writeCompressedFile(inputFile, huffmanCodes)
+	if err != nil {
+		return fmt.Errorf("failed to write the compressed file: %w", err)
+	}
+
+	return nil
+}
+
+func getCharFrequencies(inputFilepath string) (map[rune]int, error) {
 	inputFile, err := os.Open(inputFilepath)
 	if err != nil {
-		fmt.Println(err)
-		fmt.Println("There was an error opening the input file!")
-		return
+		return nil, fmt.Errorf("failed to open the input file '%s': %w", inputFilepath, err)
 	}
 	defer inputFile.Close()
 
-	charCount = make(map[rune]int)
+	charCounts := make(map[rune]int)
 	reader := bufio.NewReader(inputFile)
 	for {
 		// TODO: Ensure the size is not greater than 1
 		char, _, err := reader.ReadRune()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
-		charCount[char] += 1
+		if err != nil {
+			return nil, fmt.Errorf("failed to read rune: %w", err)
+		}
+		charCounts[char] += 1
 	}
+	return charCounts, nil
 }
 
-// createHuffmanTree creates the Huffman codes
-func createHuffmanTree() {
-	// First, create a Node for each character
+func createHuffmanTree(charCount map[rune]int) Node {
+	var nodes []Node
 	for char, count := range charCount {
-		newNode := Node{count: count, char: char}
+		newNode := Node{
+			count: count,
+			char:  &char,
+		}
 		nodes = append(nodes, newNode)
 	}
 
-	// Create the tree
-	for {
-		if len(nodes) < 2 {
-			break
-		}
-
-		// Sort the remaining Nodes by count
-		sort.Slice(nodes, func(i, j int) bool {
-			return nodes[i].count < nodes[j].count
+	// Construct the tree by creating nodes for the characters with the lowest frequency first and
+	// then working backwards to the nodes with higher frequency (including "constructed" nodes) until
+	// the head node is the only node left in the slice
+	for len(nodes) > 1 {
+		slices.SortStableFunc(nodes, func(a, b Node) int {
+			return a.count - b.count
 		})
 
-		// Remove the two Nodes with the lowest counts
 		leftNode := nodes[0]
 		rightNode := nodes[1]
-		nodes = nodes[2:]
+		nodes = slices.Delete(nodes, 0, 2)
 
-		// Create the parent Node and add it to the slice
-		parentCount := leftNode.count + rightNode.count
-		parentNode := Node{count: parentCount, left: &leftNode, right: &rightNode}
+		parentNode := Node{
+			count: leftNode.count + rightNode.count,
+			left:  &leftNode,
+			right: &rightNode,
+		}
 		nodes = append(nodes, parentNode)
 	}
+
+	return nodes[0]
 }
 
 // generateCodes creates the character codes by using a pre-order traversal of the binary tree
-func generateCodes(node Node, path string) string {
-	if node.char != 0 {
-		huffmanCodes[node.char] = path
+func generateCodes(node Node, huffmanCodes map[rune]string, path string) {
+	if node.char != nil {
+		huffmanCodes[*node.char] = path
 	}
 	if node.left != nil {
-		path += "0"
-		path = generateCodes(*node.left, path)
+		leftPath := path + "0"
+		generateCodes(*node.left, huffmanCodes, leftPath)
 	}
 	if node.right != nil {
-		path += "1"
-		path = generateCodes(*node.right, path)
+		rightPath := path + "1"
+		generateCodes(*node.right, huffmanCodes, rightPath)
 	}
-	if len(path) > 0 {
-		path = path[:len(path)-1]
-	}
-
-	return path
 }
 
 // writeCompressedFile encodes the passed file and writes it to an output file
-func writeCompressedFile(inputFilepath string) {
-	// Open both files
+func writeCompressedFile(inputFilepath string, huffmanCodes map[rune]string) error {
 	inputFile, err := os.Open(inputFilepath)
 	if err != nil {
-		fmt.Println(err)
-		fmt.Println("There was an error opening the input file!")
-		return
+		return fmt.Errorf("failed to open the input file '%s': %w", inputFilepath, err)
 	}
 	defer inputFile.Close()
 
 	// Determine the output filepath
 	dir, file := filepath.Split(inputFilepath)
-	file_details := strings.Split(file, ".")
-	filename := file_details[0]
-	extension := file_details[1]
-	compressed_filename := dir + filename + "_compressed." + extension
-	outputFile, err := os.Create(compressed_filename)
+	fileDetails := strings.Split(file, ".")
+	filename := fileDetails[0]
+	extension := fileDetails[1]
+	compressedFilename := dir + filename + "_compressed." + extension
+
+	outputFile, err := os.Create(compressedFilename)
 	if err != nil {
-		fmt.Println("There was an error opening the output file!")
-		return
+		return fmt.Errorf("failed to create the compressed file '%s': %w", compressedFilename, err)
 	}
 	defer outputFile.Close()
 
-	// Open the output file and input file
 	writer := bufio.NewWriter(outputFile)
 	reader := bufio.NewReader(inputFile)
 
-	// First, write the codes to the compressed file
+	var charCount int
 	for char, code := range huffmanCodes {
-		outputStr := string(char) + "~=" + string(code) + "><"
-		writer.WriteString(outputStr)
+		charCount += 1
+		toWrite := string(char) + delimeterBetweenCharAndCode + string(code)
+		if charCount < len(huffmanCodes) {
+			toWrite += delimeterBetweenCharacters
+		}
+		writer.WriteString(toWrite)
 	}
-	writer.WriteString("\n$\n")
+	writer.WriteString(string(codesDelimeter))
 
-	// Read the input file characters and encode 7 bits at a time
-	bitBuffer := ""
+	const encodeBitSize = 7
+
+	var bitBuffer string
 	for {
 		char, _, err := reader.ReadRune()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read rune: %w", err)
 		}
 
 		bitBuffer += huffmanCodes[char]
-		for {
-			if len(bitBuffer) < 7 {
-				break
-			}
+		for len(bitBuffer) >= encodeBitSize {
+			toEncode := bitBuffer[:encodeBitSize]
+			bitBuffer = bitBuffer[encodeBitSize:]
 
-			intValue, _ := strconv.ParseInt(bitBuffer[:7], 2, 8)
-			bitBuffer = bitBuffer[7:]
-			char := rune(intValue)
-			writer.WriteString(string(char))
+			intValue, err := strconv.ParseUint(toEncode, 2, 8)
+			if err != nil {
+				return fmt.Errorf("failed to convert binary string to int: %w", err)
+			}
+			writer.WriteString(string(rune(intValue)))
 		}
 	}
 
-	// Encode any remaining bits
-	intValue, _ := strconv.ParseInt(bitBuffer, 2, 8)
-	char := rune(intValue)
-	writer.WriteString(string(char))
+	if len(bitBuffer) > 0 {
+		intValue, err := strconv.ParseUint(bitBuffer, 2, 8)
+		if err != nil {
+			return fmt.Errorf("failed to convert binary string to int: %w", err)
+		}
+		writer.WriteString(string(rune(intValue)))
+	}
 
 	writer.Flush()
-}
-
-// Compress encodes the passed file
-func Compress(inputFile string) {
-	getCharFrequencies(inputFile)
-	createHuffmanTree()
-	huffmanCodes = make(map[rune]string)
-	generateCodes(nodes[0], "")
-	writeCompressedFile(inputFile)
-}
-
-// readCodes reads the character codes from the compressed file
-func readCodes(inputFilepath string) int {
-	inputFile, err := os.Open(inputFilepath)
-	if err != nil {
-		fmt.Println(err)
-		fmt.Println("There was an error opening the input file!")
-		return 0
-	}
-	defer inputFile.Close()
-
-	numBytesRead := 0
-	charCodes = make(map[string]rune)
-	reader := bufio.NewReader(inputFile)
-	codes := ""
-	for {
-		char, _, _ := reader.ReadRune()
-		codes += string(char)
-		numBytesRead += 1
-
-		if (char == 10) && (codes[numBytesRead-2] == 36) {
-			break
-		}
-	}
-
-	allCodes := strings.Split(codes, "><")
-	numCodes := len(allCodes) - 1
-	for codeNum, codeDetails := range allCodes {
-		if codeNum == numCodes {
-			break
-		}
-
-		parsedDetails := strings.Split(codeDetails, "~=")
-		runes := []rune(parsedDetails[0])
-		code := parsedDetails[1]
-		charCodes[code] = runes[0]
-	}
-
-	return numBytesRead
+	return nil
 }
 
 // Uncompress parses and decodes the passed file
-func Uncompress(inputFilepath string) {
-	// First, read the codes
-	lenCodeBytes := int64(readCodes(inputFilepath))
+func Uncompress(inputFilepath string) error {
+	charCodes, lenCodeBytes, err := readCodes(inputFilepath)
+	if err != nil {
+		return fmt.Errorf("failed to read character encodings: %w", err)
+	}
 
-	// Open both files
 	inputFile, err := os.Open(inputFilepath)
 	if err != nil {
-		fmt.Println(err)
-		fmt.Println("There was an error opening the input file!")
-		return
+		return fmt.Errorf("failed to open the input file '%s': %w", inputFilepath, err)
 	}
 	defer inputFile.Close()
 
-	// Determine the output filepath
 	dir, file := filepath.Split(inputFilepath)
-	file_details := strings.Split(file, ".")
-	filename := file_details[0]
-	extension := file_details[1]
-	compressed_filename := dir + filename + "_uncompressed." + extension
-	outputFile, err := os.Create(compressed_filename)
+	fileDetails := strings.Split(file, ".")
+	filename := fileDetails[0]
+	extension := fileDetails[1]
+	uncompressedFilename := dir + filename + "_uncompressed." + extension
+
+	outputFile, err := os.Create(uncompressedFilename)
 	if err != nil {
-		fmt.Println(err)
-		fmt.Println("There was an error opening the output file!")
-		return
+		return fmt.Errorf("failed to create the uncompressed file '%s': %w", uncompressedFilename, err)
 	}
 	defer outputFile.Close()
 
-	// Open the output file and input file
 	writer := bufio.NewWriter(outputFile)
 	reader := bufio.NewReader(inputFile)
 
-	// Read the rest of the input file and write characters to the output file as they are found
-	bits := ""
-	toCheck := ""
-	inputFile.Seek(lenCodeBytes, 0)
-	fileInfo, _ := os.Stat(inputFilepath)
+	var bits, toCheck string
+
+	inputFile.Seek(int64(lenCodeBytes), 0)
+	fileInfo, err := os.Stat(inputFilepath)
+	if err != nil {
+		return fmt.Errorf("failed to get stats the input file '%s': %w", inputFilepath, err)
+	}
+
 	fileSize := fileInfo.Size()
 	numBytesRead := lenCodeBytes
 	for {
 		char, _, err := reader.ReadRune()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
+		if err != nil {
+			return fmt.Errorf("failed to read rune: %w", err)
+		}
+		numBytesRead += 1
 
 		// The last character needs to use 'b' as the format spec
 		// so that the bit string is not padded with zeros
-		numBytesRead += 1
-		if numBytesRead == fileSize {
+		if numBytesRead == int(fileSize) {
 			bits += fmt.Sprintf("%b", char)
 			bits += "0"
 		} else {
 			bits += fmt.Sprintf("%07b", char)
 		}
-		for {
-			if len(bits) == 0 {
-				break
-			}
 
+		for len(bits) > 0 {
 			toCheck += string(bits[0])
 			bits = bits[1:]
 
-			if decodedChar, exists := charCodes[toCheck]; exists {
+			if decodedChar, ok := charCodes[toCheck]; ok {
 				writer.WriteString(string(decodedChar))
 				toCheck = ""
 			}
@@ -280,4 +258,42 @@ func Uncompress(inputFilepath string) {
 	}
 
 	writer.Flush()
+	return nil
+}
+
+func readCodes(inputFilepath string) (map[string]rune, int, error) {
+	inputFile, err := os.Open(inputFilepath)
+	if err != nil {
+		return nil, 0, errors.New("failed opening the input file")
+	}
+	defer inputFile.Close()
+
+	charCodes := make(map[string]rune)
+	reader := bufio.NewReader(inputFile)
+
+	var numBytesRead int
+	var codes string
+	for {
+		char, size, err := reader.ReadRune()
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to read rune: %w", err)
+		}
+		numBytesRead += size
+
+		if char == codesDelimeter {
+			break
+		}
+		codes += string(char)
+	}
+
+	allCodes := strings.Split(codes, "><")
+	for i := range len(allCodes) {
+		codeDetails := allCodes[i]
+		parsedDetails := strings.Split(codeDetails, "~=")
+		runes := []rune(parsedDetails[0])
+		code := parsedDetails[1]
+		charCodes[code] = runes[0]
+	}
+
+	return charCodes, numBytesRead, nil
 }
