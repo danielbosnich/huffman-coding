@@ -1,13 +1,14 @@
-// Unit tests for the Go implementation of Huffman Coding
 package huffman
 
 import (
 	"bufio"
-	"fmt"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -16,12 +17,9 @@ const (
 	testUncompressedFilename = "plrabn12_compressed_uncompressed.txt"
 )
 
-// Ensures that the original file matches the uncompressed file
-func TestCompareFiles(t *testing.T) {
+func TestHuffmanCoding(t *testing.T) {
 	cwd, err := os.Getwd()
-	if err != nil {
-		t.Errorf("Unable to determine the current working directory. err: %v", err)
-	}
+	require.NoError(t, err, "Failed to get the working directory")
 	testDir := filepath.Join(cwd, "..", "test")
 
 	testFilepath := filepath.Join(testDir, testFilename)
@@ -30,43 +28,40 @@ func TestCompareFiles(t *testing.T) {
 	defer os.Remove(testCompressedFilepath)
 	defer os.Remove(testUncompressedFilepath)
 
-	// Compress and uncompress the files first
-	Compress(testFilepath)
-	Uncompress(testCompressedFilepath)
+	t.Run("Compress", func(t *testing.T) {
+		err = Compress(testFilepath)
+		require.NoError(t, err, "Failed to compress the test file")
+	})
 
-	// Open both files
+	t.Run("Uncompress", func(t *testing.T) {
+		err = Uncompress(testCompressedFilepath)
+		require.NoError(t, err, "Failed to uncompress the compressed file")
+	})
+
 	originalFile, err := os.Open(testFilepath)
-	if err != nil {
-		fmt.Println(err)
-		t.Error("There was an error opening the original file!")
-		return
-	}
+	require.NoError(t, err, "Failed to open the test file")
 	defer originalFile.Close()
 
 	uncompressedFile, err := os.Open(testUncompressedFilepath)
-	if err != nil {
-		fmt.Println(err)
-		t.Error("There was an error opening the uncompressed file!")
-	}
+	require.NoError(t, err, "Failed to open the uncompressed file")
 	defer uncompressedFile.Close()
 
 	originalReader := bufio.NewReader(originalFile)
 	uncompressedReader := bufio.NewReader(uncompressedFile)
 
-	for {
-		originalByte, err1 := originalReader.ReadByte()
-		uncompressedByte, err2 := uncompressedReader.ReadByte()
-		if err1 == io.EOF && err2 == io.EOF {
-			break
-		} else if err1 == io.EOF && err2 != io.EOF {
-			t.Error("The two files are not the same length")
-		} else if err1 != io.EOF && err2 == io.EOF {
-			t.Error("The two files are not the same length")
-		}
+	t.Run("CompareFiles", func(t *testing.T) {
+		for {
+			originalByte, err1 := originalReader.ReadByte()
+			uncompressedByte, err2 := uncompressedReader.ReadByte()
+			if errors.Is(err1, io.EOF) && errors.Is(err2, io.EOF) {
+				break
+			}
 
-		if originalByte != uncompressedByte {
-			t.Error("The two files are not equivalent")
-			return
+			require.NotErrorIs(t, err1, io.EOF, "Test file is shorter than the uncompressed file")
+			require.NotErrorIs(t, err2, io.EOF, "Uncompressed file is shorter than the test file")
+			require.NoError(t, err1, "Failed to read byte from the test file")
+			require.NoError(t, err2, "Failed to read byte from the uncompressed file")
+			require.Equal(t, originalByte, uncompressedByte, "Unequal character between the two files")
 		}
-	}
+	})
 }
