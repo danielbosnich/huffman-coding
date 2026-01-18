@@ -27,31 +27,37 @@ type Node struct {
 }
 
 // Compress encodes the passed file
-func Compress(inputFile string) error {
+func Compress(inputFilepath string) error {
+	inputFile, err := os.Open(inputFilepath)
+	if err != nil {
+		return fmt.Errorf("failed to open the input file '%s': %w", inputFilepath, err)
+	}
+	defer inputFile.Close()
+
 	charCounts, err := getCharFrequencies(inputFile)
 	if err != nil {
 		return fmt.Errorf("failed to calculate character frequencies: %w", err)
+	}
+
+	_, err = inputFile.Seek(0, io.SeekStart)
+	if err != nil {
+		return fmt.Errorf("failed to seek back to the start of the input file: %w", err)
 	}
 
 	headNode := createHuffmanTree(charCounts)
 	huffmanCodes := make(map[rune]string)
 	generateCodes(headNode, huffmanCodes, "")
 
-	err = writeCompressedFile(inputFile, huffmanCodes)
+	compressedFilepath := filepathOfCompressedFile(inputFilepath)
+	err = writeCompressedFile(inputFile, compressedFilepath, huffmanCodes)
 	if err != nil {
-		return fmt.Errorf("failed to write the compressed file: %w", err)
+		return fmt.Errorf("failed to write the compressed file '%s': %w", compressedFilepath, err)
 	}
 
 	return nil
 }
 
-func getCharFrequencies(inputFilepath string) (map[rune]int, error) {
-	inputFile, err := os.Open(inputFilepath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open the input file '%s': %w", inputFilepath, err)
-	}
-	defer inputFile.Close()
-
+func getCharFrequencies(inputFile *os.File) (map[rune]int, error) {
 	charCounts := make(map[rune]int)
 	reader := bufio.NewReader(inputFile)
 	for {
@@ -115,24 +121,10 @@ func generateCodes(node Node, huffmanCodes map[rune]string, path string) {
 	}
 }
 
-// writeCompressedFile encodes the passed file and writes it to an output file
-func writeCompressedFile(inputFilepath string, huffmanCodes map[rune]string) error {
-	inputFile, err := os.Open(inputFilepath)
+func writeCompressedFile(inputFile *os.File, outputFilepath string, huffmanCodes map[rune]string) error {
+	outputFile, err := os.Create(outputFilepath)
 	if err != nil {
-		return fmt.Errorf("failed to open the input file '%s': %w", inputFilepath, err)
-	}
-	defer inputFile.Close()
-
-	// Determine the output filepath
-	dir, file := filepath.Split(inputFilepath)
-	fileDetails := strings.Split(file, ".")
-	filename := fileDetails[0]
-	extension := fileDetails[1]
-	compressedFilename := dir + filename + "_compressed." + extension
-
-	outputFile, err := os.Create(compressedFilename)
-	if err != nil {
-		return fmt.Errorf("failed to create the compressed file '%s': %w", compressedFilename, err)
+		return fmt.Errorf("failed to create the compressed file '%s': %w", outputFilepath, err)
 	}
 	defer outputFile.Close()
 
@@ -213,33 +205,44 @@ func Uncompress(inputFilepath string) error {
 	}
 	defer inputFile.Close()
 
-	fileInfo, err := inputFile.Stat()
-	if err != nil {
-		return fmt.Errorf("failed to get info for the input file '%s': %w", inputFilepath, err)
-	}
-	fileSize := fileInfo.Size()
-
-	reader := bufio.NewReader(inputFile)
-
-	numBytesRead, charCodes, err := readCodes(reader)
+	numBytesRead, charCodes, err := readCodes(inputFile)
 	if err != nil {
 		return fmt.Errorf("failed to read character encodings: %w", err)
 	}
 
-	dir, file := filepath.Split(inputFilepath)
-	fileDetails := strings.Split(file, ".")
-	filename := fileDetails[0]
-	extension := fileDetails[1]
-	uncompressedFilename := dir + filename + "_uncompressed." + extension
-
-	outputFile, err := os.Create(uncompressedFilename)
+	// This is usually necessary since the default Reader buffer size is often larger
+	// than the length of the character encodings written at the beginning of the file
+	_, err = inputFile.Seek(int64(numBytesRead), io.SeekStart)
 	if err != nil {
-		return fmt.Errorf("failed to create the uncompressed file '%s': %w", uncompressedFilename, err)
+		return fmt.Errorf("failed to seek to the end of the codes: %w", err)
+	}
+
+	uncompressedFilepath := filepathOfUncompressedFile(inputFilepath)
+	err = writeUncompressedFile(inputFile, uncompressedFilepath, charCodes, numBytesRead)
+	if err != nil {
+		return fmt.Errorf("failed to write the uncompressed file: '%s': %w", uncompressedFilepath, err)
+	}
+
+	return nil
+}
+
+func writeUncompressedFile(inputFile *os.File, uncompressedFilepath string, charCodes map[string]rune, bytesAlreadyRead int) error {
+	fileInfo, err := inputFile.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to get info for the input file: %w", err)
+	}
+	fileSize := int(fileInfo.Size())
+
+	outputFile, err := os.Create(uncompressedFilepath)
+	if err != nil {
+		return fmt.Errorf("failed to create the uncompressed file '%s': %w", uncompressedFilepath, err)
 	}
 	defer outputFile.Close()
 
 	writer := bufio.NewWriter(outputFile)
+	reader := bufio.NewReader(inputFile)
 
+	numBytesRead := bytesAlreadyRead
 	var bits, toCheck string
 	for {
 		char, size, err := reader.ReadRune()
@@ -253,7 +256,7 @@ func Uncompress(inputFilepath string) error {
 
 		// The last character needs to use 'b' as the format spec
 		// so that the bit string is not padded with zeros
-		if numBytesRead == int(fileSize) {
+		if numBytesRead == fileSize {
 			bits += fmt.Sprintf("%b", char)
 		} else {
 			bits += fmt.Sprintf("%07b", char)
@@ -280,7 +283,9 @@ func Uncompress(inputFilepath string) error {
 	return nil
 }
 
-func readCodes(reader *bufio.Reader) (int, map[string]rune, error) {
+func readCodes(inputFile *os.File) (int, map[string]rune, error) {
+	reader := bufio.NewReader(inputFile)
+
 	var numBytesRead int
 	var codes string
 	for {
@@ -308,4 +313,22 @@ func readCodes(reader *bufio.Reader) (int, map[string]rune, error) {
 	}
 
 	return numBytesRead, huffmanCodes, nil
+}
+
+func filepathOfCompressedFile(inputFilepath string) string {
+	dir, file := filepath.Split(inputFilepath)
+	fileDetails := strings.Split(file, ".")
+	filename := fileDetails[0]
+	extension := fileDetails[1]
+
+	return dir + filename + "_compressed." + extension
+}
+
+func filepathOfUncompressedFile(inputFilepath string) string {
+	dir, file := filepath.Split(inputFilepath)
+	fileDetails := strings.Split(file, ".")
+	filename := fileDetails[0]
+	extension := fileDetails[1]
+
+	return dir + filename + "_uncompressed." + extension
 }
