@@ -207,16 +207,24 @@ func writeCompressedFile(inputFilepath string, huffmanCodes map[rune]string) err
 
 // Uncompress parses and decodes the passed file
 func Uncompress(inputFilepath string) error {
-	charCodes, lenCodeBytes, err := readCodes(inputFilepath)
-	if err != nil {
-		return fmt.Errorf("failed to read character encodings: %w", err)
-	}
-
 	inputFile, err := os.Open(inputFilepath)
 	if err != nil {
 		return fmt.Errorf("failed to open the input file '%s': %w", inputFilepath, err)
 	}
 	defer inputFile.Close()
+
+	fileInfo, err := inputFile.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to get info for the input file '%s': %w", inputFilepath, err)
+	}
+	fileSize := fileInfo.Size()
+
+	reader := bufio.NewReader(inputFile)
+
+	numBytesRead, charCodes, err := readCodes(reader)
+	if err != nil {
+		return fmt.Errorf("failed to read character encodings: %w", err)
+	}
 
 	dir, file := filepath.Split(inputFilepath)
 	fileDetails := strings.Split(file, ".")
@@ -231,22 +239,8 @@ func Uncompress(inputFilepath string) error {
 	defer outputFile.Close()
 
 	writer := bufio.NewWriter(outputFile)
-	reader := bufio.NewReader(inputFile)
 
 	var bits, toCheck string
-
-	_, err = inputFile.Seek(int64(lenCodeBytes), 0)
-	if err != nil {
-		return fmt.Errorf("failed to seek to the end of the codes: %w", err)
-	}
-
-	fileInfo, err := os.Stat(inputFilepath)
-	if err != nil {
-		return fmt.Errorf("failed to get info for the input file '%s': %w", inputFilepath, err)
-	}
-
-	fileSize := fileInfo.Size()
-	numBytesRead := lenCodeBytes
 	for {
 		char, size, err := reader.ReadRune()
 		if errors.Is(err, io.EOF) {
@@ -286,21 +280,13 @@ func Uncompress(inputFilepath string) error {
 	return nil
 }
 
-func readCodes(inputFilepath string) (map[string]rune, int, error) {
-	inputFile, err := os.Open(inputFilepath)
-	if err != nil {
-		return nil, 0, errors.New("failed opening the input file")
-	}
-	defer inputFile.Close()
-
-	reader := bufio.NewReader(inputFile)
-
+func readCodes(reader *bufio.Reader) (int, map[string]rune, error) {
 	var numBytesRead int
 	var codes string
 	for {
 		char, size, err := reader.ReadRune()
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to read rune: %w", err)
+			return 0, nil, fmt.Errorf("failed to read rune: %w", err)
 		}
 		numBytesRead += size
 		codes += string(char)
@@ -321,5 +307,5 @@ func readCodes(inputFilepath string) (map[string]rune, int, error) {
 		huffmanCodes[code] = rune(char[0])
 	}
 
-	return huffmanCodes, numBytesRead, nil
+	return numBytesRead, huffmanCodes, nil
 }
