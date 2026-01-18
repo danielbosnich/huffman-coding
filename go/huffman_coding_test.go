@@ -3,6 +3,7 @@ package huffman
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -50,18 +51,20 @@ func TestHuffmanCoding(t *testing.T) {
 	uncompressedReader := bufio.NewReader(uncompressedFile)
 
 	t.Run("CompareFiles", func(t *testing.T) {
+		var bytesRead int
 		for {
 			originalByte, err1 := originalReader.ReadByte()
 			uncompressedByte, err2 := uncompressedReader.ReadByte()
 			if errors.Is(err1, io.EOF) && errors.Is(err2, io.EOF) {
 				break
 			}
+			bytesRead += 1
 
 			require.NotErrorIs(t, err1, io.EOF, "Test file is shorter than the uncompressed file")
 			require.NotErrorIs(t, err2, io.EOF, "Uncompressed file is shorter than the test file")
 			require.NoError(t, err1, "Failed to read byte from the test file")
 			require.NoError(t, err2, "Failed to read byte from the uncompressed file")
-			require.Equal(t, originalByte, uncompressedByte, "Unequal character between the two files")
+			require.Equal(t, originalByte, uncompressedByte, fmt.Sprintf("Byte %d is different between the two files", bytesRead))
 		}
 	})
 }
