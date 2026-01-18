@@ -14,10 +14,9 @@ import (
 )
 
 const (
-	codesDelimeter rune = 128
-
-	delimeterBetweenCharAndCode = "~="
-	delimeterBetweenCharacters  = "><"
+	endOfCodes            = "$$"
+	encodingEquals        = "~="
+	delimiterBetweenCodes = "><"
 )
 
 type Node struct {
@@ -56,7 +55,6 @@ func getCharFrequencies(inputFilepath string) (map[rune]int, error) {
 	charCounts := make(map[rune]int)
 	reader := bufio.NewReader(inputFile)
 	for {
-		// TODO: Ensure the size is not greater than 1
 		char, _, err := reader.ReadRune()
 		if errors.Is(err, io.EOF) {
 			break
@@ -144,13 +142,20 @@ func writeCompressedFile(inputFilepath string, huffmanCodes map[rune]string) err
 	var charCount int
 	for char, code := range huffmanCodes {
 		charCount += 1
-		toWrite := string(char) + delimeterBetweenCharAndCode + string(code)
+		toWrite := string(char) + encodingEquals + string(code)
 		if charCount < len(huffmanCodes) {
-			toWrite += delimeterBetweenCharacters
+			toWrite += delimiterBetweenCodes
 		}
-		writer.WriteString(toWrite)
+		_, err = writer.WriteString(toWrite)
+		if err != nil {
+			return fmt.Errorf("failed to write character encoding to output file: %w", err)
+		}
 	}
-	writer.WriteString(string(codesDelimeter))
+
+	_, err = writer.WriteString(endOfCodes)
+	if err != nil {
+		return fmt.Errorf("failed to write code delimiter to output file: %w", err)
+	}
 
 	const encodeBitSize = 7
 
@@ -173,7 +178,11 @@ func writeCompressedFile(inputFilepath string, huffmanCodes map[rune]string) err
 			if err != nil {
 				return fmt.Errorf("failed to convert binary string to int: %w", err)
 			}
-			writer.WriteString(string(rune(intValue)))
+
+			_, err = writer.WriteString(string(rune(intValue)))
+			if err != nil {
+				return fmt.Errorf("failed to write character to output file: %w", err)
+			}
 		}
 	}
 
@@ -182,10 +191,17 @@ func writeCompressedFile(inputFilepath string, huffmanCodes map[rune]string) err
 		if err != nil {
 			return fmt.Errorf("failed to convert binary string to int: %w", err)
 		}
-		writer.WriteString(string(rune(intValue)))
+
+		_, err = writer.WriteString(string(rune(intValue)))
+		if err != nil {
+			return fmt.Errorf("failed to write character to output file: %w", err)
+		}
 	}
 
-	writer.Flush()
+	err = writer.Flush()
+	if err != nil {
+		return fmt.Errorf("failed to flush output file: %w", err)
+	}
 	return nil
 }
 
@@ -219,29 +235,32 @@ func Uncompress(inputFilepath string) error {
 
 	var bits, toCheck string
 
-	inputFile.Seek(int64(lenCodeBytes), 0)
+	_, err = inputFile.Seek(int64(lenCodeBytes), 0)
+	if err != nil {
+		return fmt.Errorf("failed to seek to the end of the codes: %w", err)
+	}
+
 	fileInfo, err := os.Stat(inputFilepath)
 	if err != nil {
-		return fmt.Errorf("failed to get stats the input file '%s': %w", inputFilepath, err)
+		return fmt.Errorf("failed to get info for the input file '%s': %w", inputFilepath, err)
 	}
 
 	fileSize := fileInfo.Size()
 	numBytesRead := lenCodeBytes
 	for {
-		char, _, err := reader.ReadRune()
+		char, size, err := reader.ReadRune()
 		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
 			return fmt.Errorf("failed to read rune: %w", err)
 		}
-		numBytesRead += 1
+		numBytesRead += size
 
 		// The last character needs to use 'b' as the format spec
 		// so that the bit string is not padded with zeros
 		if numBytesRead == int(fileSize) {
 			bits += fmt.Sprintf("%b", char)
-			bits += "0"
 		} else {
 			bits += fmt.Sprintf("%07b", char)
 		}
@@ -251,13 +270,19 @@ func Uncompress(inputFilepath string) error {
 			bits = bits[1:]
 
 			if decodedChar, ok := charCodes[toCheck]; ok {
-				writer.WriteString(string(decodedChar))
+				_, err = writer.WriteString(string(decodedChar))
+				if err != nil {
+					return fmt.Errorf("failed to write character to output file: %w", err)
+				}
 				toCheck = ""
 			}
 		}
 	}
 
-	writer.Flush()
+	err = writer.Flush()
+	if err != nil {
+		return fmt.Errorf("failed to flush output file: %w", err)
+	}
 	return nil
 }
 
@@ -268,7 +293,6 @@ func readCodes(inputFilepath string) (map[string]rune, int, error) {
 	}
 	defer inputFile.Close()
 
-	charCodes := make(map[string]rune)
 	reader := bufio.NewReader(inputFile)
 
 	var numBytesRead int
@@ -279,21 +303,23 @@ func readCodes(inputFilepath string) (map[string]rune, int, error) {
 			return nil, 0, fmt.Errorf("failed to read rune: %w", err)
 		}
 		numBytesRead += size
+		codes += string(char)
 
-		if char == codesDelimeter {
+		if len(codes) >= 2 && codes[len(codes)-2:] == endOfCodes {
+			codes = codes[:len(codes)-2]
 			break
 		}
-		codes += string(char)
 	}
 
-	allCodes := strings.Split(codes, "><")
-	for i := range len(allCodes) {
-		codeDetails := allCodes[i]
-		parsedDetails := strings.Split(codeDetails, "~=")
-		runes := []rune(parsedDetails[0])
-		code := parsedDetails[1]
-		charCodes[code] = runes[0]
+	huffmanCodes := make(map[string]rune)
+
+	allCodes := strings.SplitSeq(codes, delimiterBetweenCodes)
+	for codeInfo := range allCodes {
+		charAndCode := strings.Split(codeInfo, encodingEquals)
+		char := charAndCode[0]
+		code := charAndCode[1]
+		huffmanCodes[code] = rune(char[0])
 	}
 
-	return charCodes, numBytesRead, nil
+	return huffmanCodes, numBytesRead, nil
 }
