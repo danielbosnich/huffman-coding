@@ -87,3 +87,65 @@ func TestHuffmanCoding(t *testing.T) {
 		}
 	})
 }
+
+func TestCompress_InvalidFilepath(t *testing.T) {
+	tests := []struct {
+		name     string
+		filepath string
+	}{
+		{
+			name:     "emptyString",
+			filepath: "",
+		},
+		{
+			name:     "nonexistentFilepath",
+			filepath: "doesNotExist.txt",
+		},
+		{
+			name:     "currentDirectoryRelative",
+			filepath: ".",
+		},
+		{
+			name:     "tmpDirectoryAbsolute",
+			filepath: "/tmp",
+		},
+	}
+
+	for _, subTest := range tests {
+		t.Run(subTest.name, func(t *testing.T) {
+			err := Compress(subTest.filepath)
+			require.Error(t, err, "Compressing an invalid file should have failed")
+		})
+	}
+}
+
+func TestUncompress_InvalidFilepath(t *testing.T) {
+	tests := []struct {
+		name     string
+		filepath string
+	}{
+		{
+			name:     "emptyString",
+			filepath: "",
+		},
+		{
+			name:     "nonexistentFilepath",
+			filepath: "doesNotExist.txt",
+		},
+		{
+			name:     "currentDirectoryRelative",
+			filepath: ".",
+		},
+		{
+			name:     "tmpDirectoryAbsolute",
+			filepath: "/tmp",
+		},
+	}
+
+	for _, subTest := range tests {
+		t.Run(subTest.name, func(t *testing.T) {
+			err := Uncompress(subTest.filepath)
+			require.Error(t, err, "Uncompressing an invalid file should have failed")
+		})
+	}
+}
