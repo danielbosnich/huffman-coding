@@ -134,7 +134,7 @@ func writeCompressedFile(inputFile *os.File, outputFilepath string, huffmanCodes
 	var charCount int
 	for char, code := range huffmanCodes {
 		charCount += 1
-		charEncoding := string(char) + encodingEquals + string(code)
+		charEncoding := string(char) + encodingEquals + code
 		if charCount < len(huffmanCodes) {
 			charEncoding += delimiterBetweenCodes
 		}
