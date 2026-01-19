@@ -39,6 +39,25 @@ func TestHuffmanCoding(t *testing.T) {
 		require.NoError(t, err, "Failed to uncompress the compressed file")
 	})
 
+	originalFileInfo, err := os.Stat(testFilepath)
+	require.NoError(t, err, "Failed to get info for the original file")
+
+	compressedFileInfo, err := os.Stat(testCompressedFilepath)
+	require.NoError(t, err, "Failed to get info for the compressed file")
+
+	uncompressedFileInfo, err := os.Stat(testUncompressedFilepath)
+	require.NoError(t, err, "Failed to get info for the original file")
+
+	t.Run("CompressedFileIsSmaller", func(t *testing.T) {
+		require.Less(t, compressedFileInfo.Size(), originalFileInfo.Size(),
+			"The compressed file should be smaller than the original file")
+	})
+
+	t.Run("OriginalFileAndUncompressedFileAreSameSize", func(t *testing.T) {
+		require.Equal(t, originalFileInfo.Size(), uncompressedFileInfo.Size(),
+			"The original file and the uncompressed file should be the same size")
+	})
+
 	originalFile, err := os.Open(testFilepath)
 	require.NoError(t, err, "Failed to open the test file")
 	defer originalFile.Close()
@@ -61,7 +80,7 @@ func TestHuffmanCoding(t *testing.T) {
 			bytesRead += 1
 
 			require.NotErrorIs(t, err1, io.EOF, "Test file is shorter than the uncompressed file")
-			require.NotErrorIs(t, err2, io.EOF, "Uncompressed file is shorter than the test file")
+			require.NotErrorIs(t, err2, io.EOF, "Uncompressed file is shorter than the original file")
 			require.NoError(t, err1, "Failed to read byte from the test file")
 			require.NoError(t, err2, "Failed to read byte from the uncompressed file")
 			require.Equal(t, originalByte, uncompressedByte, fmt.Sprintf("Byte %d is different between the two files", bytesRead))

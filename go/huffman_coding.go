@@ -93,7 +93,7 @@ func createHuffmanTree(charCount map[rune]int) Node {
 
 		leftNode := nodes[0]
 		rightNode := nodes[1]
-		nodes = slices.Delete(nodes, 0, 2)
+		nodes = nodes[2:]
 
 		parentNode := Node{
 			count: leftNode.count + rightNode.count,
@@ -134,11 +134,12 @@ func writeCompressedFile(inputFile *os.File, outputFilepath string, huffmanCodes
 	var charCount int
 	for char, code := range huffmanCodes {
 		charCount += 1
-		toWrite := string(char) + encodingEquals + string(code)
+		charEncoding := string(char) + encodingEquals + string(code)
 		if charCount < len(huffmanCodes) {
-			toWrite += delimiterBetweenCodes
+			charEncoding += delimiterBetweenCodes
 		}
-		_, err = writer.WriteString(toWrite)
+
+		_, err = writer.WriteString(charEncoding)
 		if err != nil {
 			return fmt.Errorf("failed to write character encoding to output file: %w", err)
 		}
@@ -210,7 +211,7 @@ func Uncompress(inputFilepath string) error {
 		return fmt.Errorf("failed to read character encodings: %w", err)
 	}
 
-	// This is usually necessary since the default Reader buffer size is often larger
+	// This Seek is usually necessary since the default Reader buffer size can be larger
 	// than the length of the character encodings written at the beginning of the file
 	_, err = inputFile.Seek(int64(numBytesRead), io.SeekStart)
 	if err != nil {
