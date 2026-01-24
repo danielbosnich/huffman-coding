@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	endOfCodes            = "$$"
+	endOfCodes            = "\n\n"
 	encodingEquals        = "~="
 	delimiterBetweenCodes = "><"
 )
