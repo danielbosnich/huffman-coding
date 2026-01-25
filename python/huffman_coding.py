@@ -103,7 +103,7 @@ class HuffmanCoding():
                 # First, write the codes so the file can be uncompressed
                 for char, code in self.char_codes.items():
                     output_file.write(f'{char}~={code}><')
-                output_file.write('\n$\n')
+                output_file.write('\n\n')
 
                 # Read the characters and encode 7 bits at a time
                 while True:
@@ -135,7 +135,7 @@ class HuffmanCoding():
                 codes = ''
                 for line in input_file:
                     offset += len(line)
-                    if line == '$\n':
+                    if line == '\n':
                         break
                     codes += line
 
